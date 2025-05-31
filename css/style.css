@@ -1,0 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+
+body {
+    /* Base background color, if not overridden by Tailwind on body itself */
+    /* background-color: #f0f0f0; */
+}
+
+/* Placeholder for future custom styles */
+
+/* Custom styles for radio button labels if needed beyond Tailwind peer styling */
+/* For example, a custom checkmark or other indicator if desired */
+
+/* Ensure hidden inputs are truly hidden but accessible */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
