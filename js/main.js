@@ -9,6 +9,11 @@ let originalAudioBuffer = null; // To store the pristine decoded audio
 let isProcessing = false; // To track if an audio transformation is in progress
 let currentPlayerObjectUrl = null; // For managing the HTML5 player's Object URL
 
+// Reverb IR
+let reverbIrBuffer = null;
+let irLoadingPromise = null; // To cache the promise during loading
+let irLoadedSuccessfully = false;
+
 // Placeholder for future JavaScript modules/sections
 
 // File Upload Logic
@@ -163,6 +168,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Disable transformation radios initially
     transformationRadios.forEach(radio => radio.disabled = true);
+
+    // Attempt to pre-load Reverb IR on page load using the main audioContext
+    // This is non-critical if it fails; effects can attempt loading it again.
+    if (audioContext.state === 'suspended') {
+        console.log("AudioContext is suspended. Reverb IR will be loaded on first use or after context resumes.");
+        // Optionally, trigger resume on first user interaction and then load.
+        // For now, we let apply8DEffect handle loading if this doesn't complete.
+    }
+    loadReverbIr(audioContext, 'assets/irs/default_reverb.wav').catch(error => {
+        console.warn("Initial Reverb IR pre-loading failed. Will attempt again on first use.", error);
+    });
+
 
     // Playback Functions
     const playAudio = () => {
@@ -548,8 +565,8 @@ function writeUTFBytes(view, offset, string) {
 // --- End WAV Encoding Functions ---
 
 // --- 8D Effect Function ---
-function apply8DEffect(inputBuffer) {
-    return new Promise((resolve, reject) => {
+async function apply8DEffect(inputBuffer) { // Made async
+    return new Promise(async (resolve, reject) => { // Added async for promise executor
         try {
             if (!window.OfflineAudioContext) {
                 reject(new Error("OfflineAudioContext is not supported by this browser."));
@@ -558,29 +575,124 @@ function apply8DEffect(inputBuffer) {
             // Always output stereo for 8D effect
             const offlineCtx = new OfflineAudioContext(2, inputBuffer.length, inputBuffer.sampleRate);
 
+            // Attempt to load Reverb IR (uses offlineCtx for decoding if IR not yet loaded)
+            let reverbSuccessfullyLoaded = false;
+            try {
+                // Pass offlineCtx for decoding if IR hasn't been loaded and cached yet.
+                // If audioContext (main) was used for pre-loading, this won't re-decode.
+                reverbSuccessfullyLoaded = await loadReverbIr(offlineCtx, 'assets/irs/default_reverb.wav');
+            } catch (error) {
+                console.warn("Reverb IR loading failed or skipped, proceeding without reverb for 8D effect.", error);
+            }
+
             const audioSource = offlineCtx.createBufferSource();
             audioSource.buffer = inputBuffer;
 
             // Stereo Panner Node for left-right movement
             const stereoPanner = offlineCtx.createStereoPanner();
 
-            // LFO to control the panning
-            const lfoPan = offlineCtx.createOscillator();
-            lfoPan.type = 'sine'; // Smooth oscillation
-            lfoPan.frequency.value = 0.2; // Controls speed of panning (e.g., 0.2 Hz = 5 seconds per cycle)
+            // LFO 1 for main panning
+            console.log("Setting up LFO Pan 1 for 8D effect.");
+            const lfoPan1 = offlineCtx.createOscillator();
+            lfoPan1.type = 'sine';
+            lfoPan1.frequency.value = 0.18; // Slightly adjusted main pan speed
 
-            const lfoPanDepth = offlineCtx.createGain();
-            lfoPanDepth.gain.value = 1.0; // Pan from -1 (hard left) to 1 (hard right)
+            const lfoPanDepth1 = offlineCtx.createGain();
+            lfoPanDepth1.gain.value = 0.8; // Reduced depth for LFO1
 
-            lfoPan.connect(lfoPanDepth);
-            lfoPanDepth.connect(stereoPanner.pan); // Modulate the pan AudioParam
+            lfoPan1.connect(lfoPanDepth1);
+            lfoPanDepth1.connect(stereoPanner.pan);
 
-            // Connect audio path
+            // LFO 2 for subtle panning perturbation
+            console.log("Setting up LFO Pan 2 for 8D effect.");
+            const lfoPan2 = offlineCtx.createOscillator();
+            lfoPan2.type = 'sine';
+            lfoPan2.frequency.value = 0.35; // Faster, different frequency
+
+            const lfoPanDepth2 = offlineCtx.createGain();
+            lfoPanDepth2.gain.value = 0.2; // Shallower depth for perturbation
+
+            lfoPan2.connect(lfoPanDepth2);
+            lfoPanDepth2.connect(stereoPanner.pan); // Also connects to the same .pan AudioParam
+
             audioSource.connect(stereoPanner);
-            stereoPanner.connect(offlineCtx.destination);
+            let signalProcessingNode = stereoPanner; // Start with the panner output
 
-            // Start the LFO and the audio source
-            lfoPan.start(0);
+            // BiquadFilterNode Setup (Modulated Lowpass Filter)
+            console.log("Applying modulated lowpass filter in 8D effect.");
+            const filterNode = offlineCtx.createBiquadFilter();
+            filterNode.type = 'lowpass';
+            filterNode.frequency.value = 1000; // Nominal center frequency
+            filterNode.Q.value = 1; // Resonance
+
+            const lfoFilter = offlineCtx.createOscillator();
+            lfoFilter.type = 'sine';
+            lfoFilter.frequency.value = 0.15; // Slower than pan LFO
+
+            const lfoFilterDepth = offlineCtx.createGain();
+            lfoFilterDepth.gain.value = 800; // Sweep range for filter frequency (1000 +/- 800)
+
+            lfoFilter.connect(lfoFilterDepth);
+            lfoFilterDepth.connect(filterNode.frequency); // Modulate filter frequency
+
+            signalProcessingNode.connect(filterNode); // Connect panner output to filter input
+            signalProcessingNode = filterNode; // Output of filter is now the main signal
+
+            // Main direct signal path (gain will be adjusted based on effects)
+            const directGain = offlineCtx.createGain();
+            signalProcessingNode.connect(directGain); // Connect filtered/panned signal
+            directGain.connect(offlineCtx.destination);
+
+            // Delay Path
+            console.log("Applying delay in 8D effect.");
+            const delayNode = offlineCtx.createDelay(5.0); // Max delay of 5 seconds
+            delayNode.delayTime.value = 0.35; // Delay time of 0.35 seconds
+
+            const feedbackGain = offlineCtx.createGain();
+            feedbackGain.gain.value = 0.4; // Feedback level for echo decay
+
+            const delayWetGain = offlineCtx.createGain();
+            // delayWetGain.gain.value will be set below based on reverb status
+
+            // Connections for delay
+            signalProcessingNode.connect(delayNode); // Send filtered/panned audio to delay input
+            delayNode.connect(feedbackGain);
+            feedbackGain.connect(delayNode); // Feedback loop: delay output back to its input via gain
+            delayNode.connect(delayWetGain); // Output of delay line to its own wet gain
+            delayWetGain.connect(offlineCtx.destination); // Connect delay output to main destination
+
+
+            // Reverb Path
+            if (reverbSuccessfullyLoaded && reverbIrBuffer) {
+                console.log("Applying reverb in 8D effect.");
+                const convolver = offlineCtx.createConvolver();
+                convolver.buffer = reverbIrBuffer;
+                convolver.normalize = true; // Good practice
+
+                const reverbWetGain = offlineCtx.createGain();
+
+                signalProcessingNode.connect(convolver); // Send filtered/panned audio to convolver input
+                convolver.connect(reverbWetGain);
+                reverbWetGain.connect(offlineCtx.destination);
+
+                // Adjust gains for 3-way mix: direct, delay, reverb
+                directGain.gain.value = 0.5;
+                delayWetGain.gain.value = 0.25;
+                reverbWetGain.gain.value = 0.25;
+                console.log("Gain staging: Direct=0.5, Delay=0.25, Reverb=0.25");
+
+            } else {
+                console.log("Skipping reverb in 8D effect (IR not loaded or failed to load).");
+                // No reverb, so direct signal and delay make up the mix
+                directGain.gain.value = 0.6;
+                delayWetGain.gain.value = 0.4;
+                console.log("Gain staging: Direct=0.6, Delay=0.4 (No Reverb)");
+            }
+
+            // Start the LFOs and the audio source
+            lfoPan1.start(0); // Renamed
+            lfoPan2.start(0); // Start LFO2
+            lfoFilter.start(0);
             audioSource.start(0);
 
             // Render the audio
@@ -598,3 +710,52 @@ function apply8DEffect(inputBuffer) {
     });
 }
 // --- End 8D Effect Function ---
+
+// --- Reverb IR Loading Function ---
+async function loadReverbIr(audioCtxForDecoding, irUrl = 'assets/irs/default_reverb.wav') {
+    if (irLoadedSuccessfully && reverbIrBuffer) {
+        console.log("Reverb IR already loaded.");
+        return true; // Indicates IR is ready
+    }
+
+    if (irLoadingPromise) {
+        console.log("Reverb IR loading is already in progress. Awaiting existing promise.");
+        return irLoadingPromise; // Return existing promise to avoid re-fetching
+    }
+
+    console.log("Loading Reverb IR from:", irUrl);
+    // isProcessing = true; // Removed: Let irLoadingPromise handle its own state tracking
+
+    irLoadingPromise = new Promise(async (resolve, reject) => {
+        try {
+            const response = await fetch(irUrl);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status} while fetching ${irUrl}`);
+            }
+            const arrayBuffer = await response.arrayBuffer();
+            // Use the provided audio context for decoding
+            audioCtxForDecoding.decodeAudioData(arrayBuffer,
+                (decodedBuffer) => {
+                    reverbIrBuffer = decodedBuffer;
+                    irLoadedSuccessfully = true;
+                    console.log("Reverb IR loaded and decoded successfully.");
+                    irLoadingPromise = null; // Clear the promise cache
+                    resolve(true);
+                },
+                (error) => {
+                    console.error("Error decoding Reverb IR:", error);
+                    irLoadedSuccessfully = false;
+                    irLoadingPromise = null;
+                    reject(error); // Reject the promise
+                }
+            );
+        } catch (error) {
+            console.error("Failed to fetch Reverb IR:", error);
+            irLoadedSuccessfully = false;
+            irLoadingPromise = null;
+            reject(error); // Reject the promise
+        }
+    });
+    return irLoadingPromise;
+}
+// --- End Reverb IR Loading Function ---
