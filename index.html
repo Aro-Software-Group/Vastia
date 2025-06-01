@@ -59,6 +59,11 @@
                 <div id="statusMessage" class="text-center my-3 font-medium"></div>
             </section>
 
+            <!-- Config Toggle Button -->
+            <div class="text-center my-4 c-animated-section" style="animation-delay: 400ms;">
+                <button id="toggleConfigButton" data-translate-key="showConfiguration" class="c-button bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-[var(--win-rounded-md)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500">Show Configuration</button>
+            </div>
+
             <section id="audio-preview" class="p-6 shadow-lg mb-8 c-card rounded-[var(--win-rounded-lg)] c-animated-section" style="animation-delay: 500ms;">
                 <h2 class="text-2xl font-semibold text-[var(--win-text-primary)] mb-4 text-center" data-translate-key="previewHeading">3. Preview & Adjust</h2>
                 <div class="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-3 mt-4 mb-6">
@@ -78,6 +83,19 @@
                     <button id="downloadButton" disabled class="c-button bg-[var(--win-primary-accent)] hover:bg-[var(--win-primary-accent-hover)] text-[var(--win-text-on-accent)] font-bold py-3 px-8 rounded-[var(--win-rounded-md)] disabled:opacity-50 text-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--win-primary-accent)]" data-translate-key="downloadButtonLabel">
                         Download Transformed Audio
                     </button>
+                </div>
+            </section>
+
+            <!-- Configuration Panel -->
+            <section id="configPanelContainer" class="mb-8 c-animated-section" style="animation-delay: 700ms;">
+                <div id="configPanel" class="hidden bg-[var(--win-surface-medium)] p-4 sm:p-6 rounded-[var(--win-rounded-lg)] shadow-lg max-w-xl mx-auto text-[var(--win-text-primary)]">
+                    <h3 class="text-xl sm:text-2xl font-semibold mb-4 text-center" data-translate-key="audioConfigurationTitle">Audio Configuration</h3>
+                    <div id="configOptionsContainer" class="space-y-4">
+                        <!-- Config options will be dynamically populated here -->
+                    </div>
+                    <div class="text-center mt-6">
+                        <button id="applyConfigButton" data-translate-key="applyConfiguration" class="c-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-[var(--win-rounded-md)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600">Apply Configuration</button>
+                    </div>
                 </div>
             </section>
         </main>

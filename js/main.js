@@ -18,6 +18,19 @@ let reverbIrBuffer = null;
 let irLoadingPromise = null; // To cache the promise during loading
 let irLoadedSuccessfully = false;
 
+// Configuration Variables
+// Stores default and current configurations for all audio effects.
+// Each key is an effect type (e.g., '8d'), and its value is an object
+// containing the parameters for that effect. These values are updated
+// by the UI controls in the configuration panel.
+let currentAudioConfig = {
+    '8d': { panSpeed: 0.15, lfoPanDepth1: 0.7, lfoPanDepth2: 0.3, filterFreq: 1000, lfoFilterSpeed: 0.15, reverbMix: 0.25, delayMix: 0.25 },
+    '16d': { pannerXOscRate: 0.05, pannerXOscWidth: 5, reverbMix: 0.4, pannerZPos: -5 },
+    '32d': { panXRate: 0.1, panXWidth: 3, panYRate: 0.07, panYWidth: 2, panZRate: 0.05, panZWidth: 4, reverbMix: 0.5 }
+};
+// UI elements for the configuration panel
+let toggleConfigButton, configPanel, configOptionsContainer, applyConfigButton;
+
 
 // --- Localization Functions ---
 async function loadTranslations(lang) {
@@ -126,6 +139,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const transformationRadios = document.querySelectorAll('input[name="transformation"]');
     const loadingIndicator = document.getElementById('loadingIndicator');
     const statusMessageElement = document.getElementById('statusMessage');
+
+    // Config panel UI elements
+    toggleConfigButton = document.getElementById('toggleConfigButton'); // Button to show/hide the config panel
+    configPanel = document.getElementById('configPanel'); // The configuration panel itself
+    configOptionsContainer = document.getElementById('configOptionsContainer'); // Container where dynamic options are populated
+    applyConfigButton = document.getElementById('applyConfigButton'); // Button to re-apply effect with current settings
 
     // Function to manage UI state during processing
     const setProcessingState = (isProcessingActive) => {
@@ -359,102 +378,53 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    let selectedTransformation = '8d';
+    let selectedTransformation = '8d'; // Default transformation
+
+    // Config Panel Toggle Logic
+    // Handles showing and hiding the configuration panel.
+    // When shown, it populates the panel with options for the currently selected effect.
+    if (toggleConfigButton && configPanel) {
+        toggleConfigButton.addEventListener('click', () => {
+            configPanel.classList.toggle('hidden');
+            const isHidden = configPanel.classList.contains('hidden');
+            // Update button text based on panel visibility using translation keys
+            toggleConfigButton.textContent = getTranslation(isHidden ? 'showConfiguration' : 'hideConfiguration');
+            if (!isHidden) {
+                populateConfigOptions(selectedTransformation); // Populate/refresh options when panel is shown
+            }
+        });
+    }
+
+    // Apply Config Button Listener
+    // When clicked, re-applies the currently selected audio effect using the latest
+    // configuration values from `currentAudioConfig`.
+    if (applyConfigButton) {
+        applyConfigButton.addEventListener('click', () => {
+            if (originalAudioBuffer && selectedTransformation) {
+                console.log("Apply config button clicked for:", selectedTransformation, "with config:", currentAudioConfig[selectedTransformation]);
+                triggerAudioProcessing(); // Central function to handle effect application
+            }
+        });
+    }
 
     if (transformationRadios.length > 0) {
         transformationRadios.forEach(radio => {
             if (radio.checked) {
                 selectedTransformation = radio.value;
+                // Optionally trigger initial processing or populate config if panel is visible by default
             }
             radio.addEventListener('change', (event) => {
                 selectedTransformation = event.target.value;
                 console.log("Selected transformation:", selectedTransformation);
-
-                if (originalAudioBuffer && !isProcessing) {
-                    if (audioContext.state === 'running' && currentSource) {
-                        console.log("Stopping current audio before transformation.");
-                        stopAudio();
-                    }
-                    if (audioContext.state === 'suspended') {
-                        audioContext.resume();
-                    }
-
-                    setProcessingState(true);
-
-                    let effectPromise;
-                    let effectDisplayName;
-
-                    if (selectedTransformation === '8d') {
-                        console.log(`Applying '8D Effect'...`);
-                        effectPromise = apply8DEffect(originalAudioBuffer);
-                        effectDisplayName = "8D Effect"; // This could be translated if needed: getTranslation('effectName8D')
-                    } else if (selectedTransformation === '16d' || selectedTransformation === '32d') {
-                        effectDisplayName = `${selectedTransformation}`; // getTranslation(`effectName${selectedTransformation}`)
-                        console.log(`Applying placeholder '${effectDisplayName}'...`);
-                        effectPromise = applyStereoWidening(originalAudioBuffer);
-                    } else {
-                        console.log(`No specific effect defined for '${selectedTransformation}'. Reverting to original.`);
-                        audioBuffer = originalAudioBuffer;
-                        if (statusMessageElement) {
-                            statusMessageElement.textContent = getTranslation('noEffectApplied', selectedTransformation);
-                            statusMessageElement.className = 'text-center my-3 font-medium text-gray-600';
-                        }
-                        if (html5AudioPlayer && selectedFile) {
-                            if (currentPlayerObjectUrl) URL.revokeObjectURL(currentPlayerObjectUrl);
-                            currentPlayerObjectUrl = URL.createObjectURL(selectedFile);
-                            html5AudioPlayer.src = currentPlayerObjectUrl;
-                        }
-                        setProcessingState(false);
-                        effectPromise = null;
-                    }
-
-                    if (effectPromise) {
-                        effectPromise.then(renderedBuffer => {
-                            audioBuffer = renderedBuffer;
-                            const successMsg = getTranslation('effectAppliedSuccess', effectDisplayName);
-                            console.log(successMsg);
-                            if (statusMessageElement) {
-                                statusMessageElement.textContent = successMsg;
-                                statusMessageElement.className = 'text-center my-3 font-medium text-green-600';
-                            }
-                            if (html5AudioPlayer) {
-                                if (currentPlayerObjectUrl) URL.revokeObjectURL(currentPlayerObjectUrl);
-                                try {
-                                    const playerWavBlob = audioBufferToWav(audioBuffer);
-                                    currentPlayerObjectUrl = URL.createObjectURL(playerWavBlob);
-                                    html5AudioPlayer.src = currentPlayerObjectUrl;
-                                    console.log("HTML5 player updated with transformed audio.");
-                                } catch (wavError) {
-                                    console.error("Error creating WAV for HTML5 player:", wavError);
-                                }
-                            }
-                        })
-                        .catch(error => {
-                            const errorMsg = getTranslation('effectAppliedError', effectDisplayName, error.message);
-                            console.error(errorMsg);
-                            if (statusMessageElement) {
-                                statusMessageElement.textContent = errorMsg;
-                                statusMessageElement.className = 'text-center my-3 font-medium text-red-600';
-                            }
-                            audioBuffer = originalAudioBuffer;
-                            if (html5AudioPlayer && selectedFile) {
-                                if (currentPlayerObjectUrl) URL.revokeObjectURL(currentPlayerObjectUrl);
-                                currentPlayerObjectUrl = URL.createObjectURL(selectedFile);
-                                html5AudioPlayer.src = currentPlayerObjectUrl;
-                                console.log("HTML5 player reverted to original audio due to processing error.");
-                            }
-                        })
-                        .finally(() => {
-                            setProcessingState(false);
-                        });
-                    }
-                } else if (isProcessing) {
-                    console.log("Cannot change transformation while processing is active.");
-                    const previouslyCheckedRadio = document.querySelector(`input[name="transformation"][value="${selectedTransformation}"]`);
-                    if (previouslyCheckedRadio) previouslyCheckedRadio.checked = true;
+                if (configPanel && !configPanel.classList.contains('hidden')) {
+                    populateConfigOptions(selectedTransformation);
                 }
+                triggerAudioProcessing();
             });
         });
+        // Trigger processing for the default checked transformation if a file is already selected (e.g. page reload scenario)
+        // This might require checking if originalAudioBuffer exists from a previous session or if a file is auto-selected.
+        // For now, processing is primarily triggered by file selection or transformation change.
         console.log("Initial transformation:", selectedTransformation);
     }
 
@@ -579,8 +549,266 @@ function writeUTFBytes(view, offset, string) {
 }
 // --- End WAV Encoding Functions ---
 
+/**
+ * Dynamically populates the configuration panel with options for the given effect type.
+ * It clears previous options and builds new UI elements (sliders) based on the
+ * parameters defined in `currentAudioConfig` for the specified `effectType`.
+ * Event listeners are attached to these sliders to update `currentAudioConfig` in real-time.
+ * @param {string} effectType - The type of audio effect (e.g., '8d', '16d', '32d').
+ */
+function populateConfigOptions(effectType) {
+    if (!configOptionsContainer) return;
+    configOptionsContainer.innerHTML = ''; // Clear previous options before adding new ones
+
+    const config = currentAudioConfig[effectType]; // Get current configuration for the effect
+    // Set a title for the configuration section, using translation if available
+    let optionsHtml = `<h4 class="text-md font-semibold mb-2">${getTranslation(effectType + 'ConfigTitle', effectType + " Settings")}</h4>`;
+
+    if (!config) {
+        // Display a message if no configuration is defined for the effect type
+        optionsHtml += `<p>${getTranslation('noConfigYet', "Configuration options for this effect are not yet available.")}</p>`;
+        configOptionsContainer.innerHTML = optionsHtml;
+        return;
+    }
+
+    // Generate HTML for sliders based on the effect type
+    if (effectType === '8d') {
+        optionsHtml += `
+            <div class="space-y-1">
+                <label for="8dPanSpeed" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('panSpeed8D', 'Panning Speed:')}</label>
+                <input type="range" id="8dPanSpeed" min="0.01" max="0.5" step="0.01" value="${config.panSpeed}" class="config-slider">
+                <span id="8dPanSpeedValue" class="text-xs text-[var(--win-text-tertiary)]">${config.panSpeed} Hz</span>
+            </div>
+            <div class="space-y-1">
+                <label for="8dLfoPanDepth1" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('lfoPanDepth1_8D', 'LFO 1 Depth:')}</label>
+                <input type="range" id="8dLfoPanDepth1" min="0.1" max="1.0" step="0.05" value="${config.lfoPanDepth1}" class="config-slider">
+                <span id="8dLfoPanDepth1Value" class="text-xs text-[var(--win-text-tertiary)]">${config.lfoPanDepth1}</span>
+            </div>
+            <div class="space-y-1">
+                <label for="8dLfoPanDepth2" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('lfoPanDepth2_8D', 'LFO 2 Depth:')}</label>
+                <input type="range" id="8dLfoPanDepth2" min="0.1" max="1.0" step="0.05" value="${config.lfoPanDepth2}" class="config-slider">
+                <span id="8dLfoPanDepth2Value" class="text-xs text-[var(--win-text-tertiary)]">${config.lfoPanDepth2}</span>
+            </div>
+            <div class="space-y-1">
+                <label for="8dFilterFreq" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('filterFreq8D', 'Filter Base Freq:')}</label>
+                <input type="range" id="8dFilterFreq" min="200" max="2000" step="50" value="${config.filterFreq}" class="config-slider">
+                <span id="8dFilterFreqValue" class="text-xs text-[var(--win-text-tertiary)]">${config.filterFreq} Hz</span>
+            </div>
+            <div class="space-y-1">
+                <label for="8dlfoFilterSpeed" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('lfoFilterSpeed8D', 'Filter LFO Speed:')}</label>
+                <input type="range" id="8dlfoFilterSpeed" min="0.01" max="0.5" step="0.01" value="${config.lfoFilterSpeed}" class="config-slider">
+                <span id="8dlfoFilterSpeedValue" class="text-xs text-[var(--win-text-tertiary)]">${config.lfoFilterSpeed} Hz</span>
+            </div>
+            <div class="space-y-1">
+                <label for="8dReverbMix" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('reverbMix8D', 'Reverb Mix:')}</label>
+                <input type="range" id="8dReverbMix" min="0" max="1" step="0.05" value="${config.reverbMix}" class="config-slider">
+                <span id="8dReverbMixValue" class="text-xs text-[var(--win-text-tertiary)]">${config.reverbMix}</span>
+            </div>
+            <div class="space-y-1">
+                <label for="8dDelayMix" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('delayMix8D', 'Delay Mix:')}</label>
+                <input type="range" id="8dDelayMix" min="0" max="1" step="0.05" value="${config.delayMix}" class="config-slider">
+                <span id="8dDelayMixValue" class="text-xs text-[var(--win-text-tertiary)]">${config.delayMix}</span>
+            </div>
+        `;
+    } else if (effectType === '16d') {
+        optionsHtml += `
+            <div class="space-y-1"><label for="16dOscRate" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('oscRate16D', 'X-Axis Osc. Rate:')}</label><input type="range" id="16dOscRate" min="0.01" max="0.2" step="0.01" value="${config.pannerXOscRate}" class="config-slider"><span id="16dOscRateValue" class="text-xs text-[var(--win-text-tertiary)]">${config.pannerXOscRate} Hz</span></div>
+            <div class="space-y-1"><label for="16dOscWidth" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('oscWidth16D', 'X-Axis Osc. Width:')}</label><input type="range" id="16dOscWidth" min="1" max="10" step="0.5" value="${config.pannerXOscWidth}" class="config-slider"><span id="16dOscWidthValue" class="text-xs text-[var(--win-text-tertiary)]">${config.pannerXOscWidth}</span></div>
+            <div class="space-y-1"><label for="16dZPos" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('zPos16D', 'Z Position:')}</label><input type="range" id="16dZPos" min="-10" max="0" step="0.5" value="${config.pannerZPos}" class="config-slider"><span id="16dZPosValue" class="text-xs text-[var(--win-text-tertiary)]">${config.pannerZPos}</span></div>
+            <div class="space-y-1"><label for="16dReverbMix" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('reverbMix16D', 'Reverb Mix:')}</label><input type="range" id="16dReverbMix" min="0" max="1" step="0.05" value="${config.reverbMix}" class="config-slider"><span id="16dReverbMixValue" class="text-xs text-[var(--win-text-tertiary)]">${config.reverbMix}</span></div>
+        `;
+    } else if (effectType === '32d') {
+        optionsHtml += `
+            <div class="space-y-1"><label for="32dPanXRate" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('panXRate32D', 'X-Rate:')}</label><input type="range" id="32dPanXRate" min="0.01" max="0.5" step="0.01" value="${config.panXRate}" class="config-slider"><span id="32dPanXRateValue" class="text-xs text-[var(--win-text-tertiary)]">${config.panXRate} Hz</span></div>
+            <div class="space-y-1"><label for="32dPanXWidth" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('panXWidth32D', 'X-Width:')}</label><input type="range" id="32dPanXWidth" min="0" max="10" step="0.5" value="${config.panXWidth}" class="config-slider"><span id="32dPanXWidthValue" class="text-xs text-[var(--win-text-tertiary)]">${config.panXWidth}</span></div>
+            <div class="space-y-1"><label for="32dPanYRate" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('panYRate32D', 'Y-Rate:')}</label><input type="range" id="32dPanYRate" min="0.01" max="0.5" step="0.01" value="${config.panYRate}" class="config-slider"><span id="32dPanYRateValue" class="text-xs text-[var(--win-text-tertiary)]">${config.panYRate} Hz</span></div>
+            <div class="space-y-1"><label for="32dPanYWidth" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('panYWidth32D', 'Y-Width:')}</label><input type="range" id="32dPanYWidth" min="0" max="10" step="0.5" value="${config.panYWidth}" class="config-slider"><span id="32dPanYWidthValue" class="text-xs text-[var(--win-text-tertiary)]">${config.panYWidth}</span></div>
+            <div class="space-y-1"><label for="32dPanZRate" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('panZRate32D', 'Z-Rate:')}</label><input type="range" id="32dPanZRate" min="0.01" max="0.5" step="0.01" value="${config.panZRate}" class="config-slider"><span id="32dPanZRateValue" class="text-xs text-[var(--win-text-tertiary)]">${config.panZRate} Hz</span></div>
+            <div class="space-y-1"><label for="32dPanZWidth" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('panZWidth32D', 'Z-Width:')}</label><input type="range" id="32dPanZWidth" min="0" max="10" step="0.5" value="${config.panZWidth}" class="config-slider"><span id="32dPanZWidthValue" class="text-xs text-[var(--win-text-tertiary)]">${config.panZWidth}</span></div>
+            <div class="space-y-1"><label for="32dReverbMix" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('reverbMix32D', 'Reverb Mix:')}</label><input type="range" id="32dReverbMix" min="0" max="1" step="0.05" value="${config.reverbMix}" class="config-slider"><span id="32dReverbMixValue" class="text-xs text-[var(--win-text-tertiary)]">${config.reverbMix}</span></div>
+        `;
+    }
+    configOptionsContainer.innerHTML = optionsHtml;
+    document.querySelectorAll('.config-slider').forEach(slider => {
+        const displayId = slider.id + 'Value';
+        const valueDisplay = document.getElementById(displayId);
+        const effectKey = slider.id.substring(0, slider.id.indexOf('P') > -1 ? slider.id.indexOf('P') : slider.id.indexOf('L') > -1 ? slider.id.indexOf('L') : slider.id.indexOf('F') > -1 ? slider.id.indexOf('F') : slider.id.indexOf('R') > -1 ? slider.id.indexOf('R') : slider.id.indexOf('D')); //e.g. 8d from 8dPanSpeed
+        const configKey = slider.id.substring(2); //e.g. PanSpeed from 8dPanSpeed
+        let formattedConfigKey = configKey.charAt(0).toLowerCase() + configKey.slice(1); // panSpeed
+         // Special handling for keys like lfoPanDepth1, pannerXOscRate etc.
+        if (slider.id.includes('LfoPanDepth1')) formattedConfigKey = 'lfoPanDepth1';
+        else if (slider.id.includes('LfoPanDepth2')) formattedConfigKey = 'lfoPanDepth2';
+        else if (slider.id.includes('FilterFreq')) formattedConfigKey = 'filterFreq';
+        else if (slider.id.includes('lfoFilterSpeed')) formattedConfigKey = 'lfoFilterSpeed';
+        else if (slider.id.includes('ReverbMix')) formattedConfigKey = 'reverbMix';
+        else if (slider.id.includes('DelayMix')) formattedConfigKey = 'delayMix';
+        else if (slider.id.includes('OscRate')) formattedConfigKey = 'pannerXOscRate';
+        else if (slider.id.includes('OscWidth')) formattedConfigKey = 'pannerXOscWidth';
+        else if (slider.id.includes('ZPos')) formattedConfigKey = 'pannerZPos';
+        else if (slider.id.includes('PanXRate')) formattedConfigKey = 'panXRate';
+        else if (slider.id.includes('PanXWidth')) formattedConfigKey = 'panXWidth';
+        else if (slider.id.includes('PanYRate')) formattedConfigKey = 'panYRate';
+        else if (slider.id.includes('PanYWidth')) formattedConfigKey = 'panYWidth';
+        else if (slider.id.includes('PanZRate')) formattedConfigKey = 'panZRate';
+        else if (slider.id.includes('PanZWidth')) formattedConfigKey = 'panZWidth';
+
+
+        slider.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            const unit = (slider.id.toLowerCase().includes('rate') || slider.id.toLowerCase().includes('speed')) ? ' Hz' : '';
+            valueDisplay.textContent = e.target.value + unit;
+            currentAudioConfig[effectKey][formattedConfigKey] = value;
+            console.log(`[populateConfigOptions] Updated currentAudioConfig['${effectKey}'].${formattedConfigKey} to: ${value}`);
+        });
+    });
+}
+
+/**
+ * Central function to initiate the audio processing for the selected effect.
+ * - Handles stopping any currently playing audio.
+ * - Manages the AudioContext state (resumes if suspended).
+ * - Sets a processing state flag to disable UI elements during processing.
+ * - Retrieves the current configuration for the selected effect.
+ * - Calls the appropriate effect function (apply8DEffect, apply16DEffect, etc.).
+ * - Handles the promise returned by the effect function to update UI (status messages, player).
+ */
+function triggerAudioProcessing() {
+    // Don't proceed if no audio buffer is loaded or if processing is already active
+    if (!originalAudioBuffer || isProcessing) {
+        if (isProcessing) console.log("Processing already in progress. New request ignored.");
+        return;
+    }
+
+    // Stop any audio that might be currently playing
+    if (audioContext.state === 'running' && currentSource) {
+        console.log("Stopping current audio before new transformation.");
+        stopAudio();
+    }
+    // Resume AudioContext if it's suspended (e.g., after inactivity or page load)
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+
+    setProcessingState(true); // Indicate that processing has started, disable relevant UI
+    let effectPromise;
+    let effectDisplayName;
+    // Get the configuration for the currently selected transformation
+    const effectConfig = currentAudioConfig[selectedTransformation];
+    console.log(`[triggerAudioProcessing] Selected Transformation: ${selectedTransformation}`);
+    console.log(`[triggerAudioProcessing] Effect Configuration to be applied:`, effectConfig);
+
+    // Call the appropriate effect function based on the selected transformation
+    if (selectedTransformation === '8d') {
+        effectPromise = apply8DEffect(originalAudioBuffer, effectConfig);
+        effectDisplayName = getTranslation('effectName8D', "8D Effect");
+    } else if (selectedTransformation === '16d') {
+        effectPromise = apply16DEffect(originalAudioBuffer, effectConfig);
+        effectDisplayName = getTranslation('effectName16D', "16D Effect");
+    } else if (selectedTransformation === '32d') {
+        effectPromise = apply32DEffect(originalAudioBuffer, effectConfig);
+        effectDisplayName = getTranslation('effectName32D', "32D Effect");
+    } else {
+        console.log(`No specific effect defined for '${selectedTransformation}'. Reverting to original.`);
+        audioBuffer = originalAudioBuffer;
+        if (statusMessageElement) {
+            statusMessageElement.textContent = getTranslation('noEffectApplied', selectedTransformation);
+            statusMessageElement.className = 'text-center my-3 font-medium text-gray-600'; // Consider var for color
+        }
+        if (html5AudioPlayer && selectedFile) {
+            if (currentPlayerObjectUrl) URL.revokeObjectURL(currentPlayerObjectUrl);
+            currentPlayerObjectUrl = URL.createObjectURL(selectedFile);
+            html5AudioPlayer.src = currentPlayerObjectUrl;
+        }
+        setProcessingState(false);
+        return; // No promise to handle
+    }
+
+    if (effectPromise) {
+        console.log(`[triggerAudioProcessing] Effect promise created for ${effectDisplayName}. Waiting for render...`);
+        effectPromise.then(renderedBuffer => {
+            audioBuffer = renderedBuffer;
+            const successMsg = getTranslation('effectAppliedSuccess', effectDisplayName);
+            console.log(`[triggerAudioProcessing] Effect ${effectDisplayName} applied successfully. Message: ${successMsg}`);
+            if (statusMessageElement) {
+                statusMessageElement.textContent = successMsg;
+                statusMessageElement.className = 'text-center my-3 font-medium text-green-600'; // Consider var for color
+            }
+            if (html5AudioPlayer) {
+                if (currentPlayerObjectUrl) URL.revokeObjectURL(currentPlayerObjectUrl);
+                try {
+                    const playerWavBlob = audioBufferToWav(audioBuffer);
+                    currentPlayerObjectUrl = URL.createObjectURL(playerWavBlob);
+                    html5AudioPlayer.src = currentPlayerObjectUrl;
+                    console.log("HTML5 player updated with transformed audio.");
+                } catch (wavError) {
+                    console.error("Error creating WAV for HTML5 player:", wavError);
+                }
+            }
+        })
+        .catch(error => {
+            const errorMsg = getTranslation('effectAppliedError', effectDisplayName, error.message);
+            console.error(`[triggerAudioProcessing] Error applying effect ${effectDisplayName}:`, error.message);
+            if (statusMessageElement) {
+                statusMessageElement.textContent = errorMsg;
+                statusMessageElement.className = 'text-center my-3 font-medium text-red-600'; // Consider var for color
+            }
+            audioBuffer = originalAudioBuffer; // Revert to original on error
+            if (html5AudioPlayer && selectedFile) {
+                if (currentPlayerObjectUrl) URL.revokeObjectURL(currentPlayerObjectUrl);
+                currentPlayerObjectUrl = URL.createObjectURL(selectedFile);
+                html5AudioPlayer.src = currentPlayerObjectUrl;
+                console.log("HTML5 player reverted to original audio due to processing error.");
+            }
+        })
+        .finally(() => {
+            setProcessingState(false);
+            // Refresh config options if panel is open, as processing might have taken time
+            // and user might have changed radio button for a different effect type
+            if (configPanel && !configPanel.classList.contains('hidden')) {
+                 populateConfigOptions(selectedTransformation);
+            }
+        });
+    }
+}
+
+
 // --- 8D Effect Function ---
-async function apply8DEffect(inputBuffer) {
+/**
+ * Applies an 8D audio effect to the input buffer.
+ * Features:
+ * - Dual LFOs for stereo panning: Creates a circular rotation effect.
+ *   - `lfoPan1` and `lfoPan2` oscillate at slightly different frequencies and depths
+ *     (controlled by `config.panSpeed`, `config.lfoPanDepth1`, `config.lfoPanDepth2`)
+ *     to make the panning feel more complex.
+ * - Low-pass filter with LFO: Adds a sweeping filter effect.
+ *   - `filterNode` is a BiquadFilter (lowpass).
+ *   - `lfoFilter` modulates the filter's cutoff frequency (controlled by `config.lfoFilterSpeed`).
+ *   - `config.filterFreq` sets the base cutoff frequency of the filter.
+ * - Delay effect: Adds spaciousness.
+ * - Reverb effect: Adds further spaciousness using a convolution reverb.
+ * - Configurable parameters:
+ *   - `panSpeed`: Base speed of the main panning LFOs.
+ *   - `lfoPanDepth1`, `lfoPanDepth2`: Depth of the two panning LFOs.
+ *   - `filterFreq`: Base cutoff frequency for the lowpass filter.
+ *   - `lfoFilterSpeed`: Speed of the LFO modulating the filter's frequency.
+ *   - `reverbMix`: Wet/dry mix for the reverb effect.
+ *   - `delayMix`: Wet/dry mix for the delay effect.
+ * - Gain Staging:
+ *   - The final output is a mix of direct (filtered), delay, and reverb signals.
+ *   - `config.reverbMix` controls the reverb amount.
+ *   - `config.delayMix` controls the delay amount.
+ *   - The direct signal proportion is `1 - reverbMix - delayMix`.
+ *   - If reverb is not loaded, its intended mix portion is redistributed proportionally
+ *     between the direct and delay signals to maintain overall loudness.
+ * @param {AudioBuffer} inputBuffer - The original audio data.
+ * @param {object} userConfig - User-defined configuration for the effect.
+ * @returns {Promise<AudioBuffer>} A promise that resolves with the processed audio buffer.
+ */
+async function apply8DEffect(inputBuffer, userConfig = {}) {
+    const config = { ...currentAudioConfig['8d'], ...userConfig }; // Merge user config with defaults
+    console.log("[apply8DEffect] Received userConfig:", userConfig);
+    console.log("[apply8DEffect] Applying 8D effect with final merged config:", config);
+
     return new Promise(async (resolve, reject) => {
         try {
             if (!window.OfflineAudioContext) {
@@ -597,66 +825,100 @@ async function apply8DEffect(inputBuffer) {
             const audioSource = offlineCtx.createBufferSource();
             audioSource.buffer = inputBuffer;
             const stereoPanner = offlineCtx.createStereoPanner();
+
             const lfoPan1 = offlineCtx.createOscillator();
             lfoPan1.type = 'sine';
-            lfoPan1.frequency.value = 0.18;
+            lfoPan1.frequency.value = config.panSpeed;
+            console.log(`[apply8DEffect] Setting lfoPan1.frequency.value to: ${config.panSpeed}`);
             const lfoPanDepth1 = offlineCtx.createGain();
-            lfoPanDepth1.gain.value = 0.8;
+            lfoPanDepth1.gain.value = config.lfoPanDepth1;
+            console.log(`[apply8DEffect] Setting lfoPanDepth1.gain.value to: ${config.lfoPanDepth1}`);
             lfoPan1.connect(lfoPanDepth1);
             lfoPanDepth1.connect(stereoPanner.pan);
+
             const lfoPan2 = offlineCtx.createOscillator();
             lfoPan2.type = 'sine';
-            lfoPan2.frequency.value = 0.35;
+            lfoPan2.frequency.value = config.panSpeed * 1.66; // Maintain ratio
+            console.log(`[apply8DEffect] Setting lfoPan2.frequency.value to: ${config.panSpeed * 1.66}`);
             const lfoPanDepth2 = offlineCtx.createGain();
-            lfoPanDepth2.gain.value = 0.2;
+            lfoPanDepth2.gain.value = config.lfoPanDepth2;
+            console.log(`[apply8DEffect] Setting lfoPanDepth2.gain.value to: ${config.lfoPanDepth2}`);
             lfoPan2.connect(lfoPanDepth2);
             lfoPanDepth2.connect(stereoPanner.pan);
+
             audioSource.connect(stereoPanner);
             let signalProcessingNode = stereoPanner;
+
             const filterNode = offlineCtx.createBiquadFilter();
             filterNode.type = 'lowpass';
-            filterNode.frequency.value = 1000;
-            filterNode.Q.value = 1;
+            filterNode.frequency.value = config.filterFreq;
+            console.log(`[apply8DEffect] Setting filterNode.frequency.value to: ${config.filterFreq}`);
+            filterNode.Q.value = 1; // Keep Q fixed for now, could be configurable
+
             const lfoFilter = offlineCtx.createOscillator();
             lfoFilter.type = 'sine';
-            lfoFilter.frequency.value = 0.15;
+            lfoFilter.frequency.value = config.lfoFilterSpeed;
+            console.log(`[apply8DEffect] Setting lfoFilter.frequency.value to: ${config.lfoFilterSpeed}`);
             const lfoFilterDepth = offlineCtx.createGain();
-            lfoFilterDepth.gain.value = 800;
+            lfoFilterDepth.gain.value = 800; // Keep depth fixed, could be configurable
             lfoFilter.connect(lfoFilterDepth);
             lfoFilterDepth.connect(filterNode.frequency);
+
             signalProcessingNode.connect(filterNode);
-            signalProcessingNode = filterNode;
+            signalProcessingNode = filterNode; // Output of filter is now the main signal path
+
             const directGain = offlineCtx.createGain();
-            signalProcessingNode.connect(directGain);
-            directGain.connect(offlineCtx.destination);
-            const delayNode = offlineCtx.createDelay(5.0);
-            delayNode.delayTime.value = 0.35;
+            signalProcessingNode.connect(directGain); // Filtered signal to directGain
+
+            const delayNode = offlineCtx.createDelay(5.0); // Max delay time
+            delayNode.delayTime.value = 0.35; // Fixed delay time
             const feedbackGain = offlineCtx.createGain();
-            feedbackGain.gain.value = 0.4;
+            feedbackGain.gain.value = 0.4; // Fixed feedback
             const delayWetGain = offlineCtx.createGain();
-            signalProcessingNode.connect(delayNode);
+
+            signalProcessingNode.connect(delayNode); // Filtered signal also to delay line
             delayNode.connect(feedbackGain);
-            feedbackGain.connect(delayNode);
-            delayNode.connect(delayWetGain);
+            feedbackGain.connect(delayNode); // Feedback loop
+            delayNode.connect(delayWetGain); // Output of delay line to its own gain control
+
+            // Connect gains to destination
+            directGain.connect(offlineCtx.destination);
             delayWetGain.connect(offlineCtx.destination);
+
+            const configReverbMix = config.reverbMix;
+            const configDelayMix = config.delayMix;
+            let actualDirectGain = Math.max(0, 1 - configReverbMix - configDelayMix);
+            let actualDelayGain = configDelayMix;
+            let actualReverbGain = configReverbMix;
+            let reverbWetGain; // Declare for potential use
 
             if (reverbSuccessfullyLoaded && reverbIrBuffer) {
                 const convolver = offlineCtx.createConvolver();
                 convolver.buffer = reverbIrBuffer;
                 convolver.normalize = true;
-                const reverbWetGain = offlineCtx.createGain();
+                reverbWetGain = offlineCtx.createGain(); // Initialize here
                 signalProcessingNode.connect(convolver);
                 convolver.connect(reverbWetGain);
                 reverbWetGain.connect(offlineCtx.destination);
-                directGain.gain.value = 0.5;
-                delayWetGain.gain.value = 0.25;
-                reverbWetGain.gain.value = 0.25;
-                console.log("Gain staging: Direct=0.5, Delay=0.25, Reverb=0.25");
-            } else {
-                directGain.gain.value = 0.6;
-                delayWetGain.gain.value = 0.4;
-                console.log("Gain staging: Direct=0.6, Delay=0.4 (No Reverb)");
+
+                reverbWetGain.gain.value = actualReverbGain;
+                delayWetGain.gain.value = actualDelayGain;
+                directGain.gain.value = actualDirectGain;
+                console.log(`[apply8DEffect] Reverb Loaded. Gains - Direct: ${actualDirectGain.toFixed(2)}, Delay: ${actualDelayGain.toFixed(2)}, Reverb: ${actualReverbGain.toFixed(2)}`);
+            } else { // No Reverb: distribute reverb's portion to direct and delay proportionally
+                const totalGainNoReverb = actualDirectGain + actualDelayGain;
+                if (totalGainNoReverb > 0) {
+                    directGain.gain.value = (actualDirectGain / totalGainNoReverb) * (actualDirectGain + actualDelayGain + actualReverbGain);
+                    delayWetGain.gain.value = (actualDelayGain / totalGainNoReverb) * (actualDirectGain + actualDelayGain + actualReverbGain);
+                } else { // If both direct and delay were 0, and reverb was also 0 (or not loaded)
+                    directGain.gain.value = 1; // Default to full direct if everything is zero
+                    delayWetGain.gain.value = 0;
+                }
+                if(reverbWetGain) reverbWetGain.gain.value = 0; // Ensure reverb gain is 0 if node exists but not used
+                console.log(`[apply8DEffect] No Reverb. Gains - Direct: ${directGain.gain.value.toFixed(2)}, Delay: ${delayWetGain.gain.value.toFixed(2)}`);
             }
+            // console.log(`8D Gains: Direct=${directGain.gain.value.toFixed(2)}, Delay=${delayWetGain.gain.value.toFixed(2)}, Reverb=${reverbWetGain ? reverbWetGain.gain.value.toFixed(2) : 'N/A'}`); // More detailed logs above
+
             lfoPan1.start(0);
             lfoPan2.start(0);
             lfoFilter.start(0);
@@ -674,6 +936,249 @@ async function apply8DEffect(inputBuffer) {
     });
 }
 // --- End 8D Effect Function ---
+
+// --- 16D Effect Function ---
+/**
+ * Applies a 16D audio effect, aiming for a wide, spacious sound field with gentle movement.
+ * Features:
+ * - 3D PannerNode: Uses `PannerNode` with 'HRTF' panning model for high-quality spatialization.
+ *   The sound source is positioned in 3D space.
+ * - X-axis Oscillation: An LFO (`lfoX`) gently modulates the panner's X-axis position.
+ *   - `config.pannerXOscRate`: Controls the speed of this oscillation.
+ *   - `config.pannerXOscWidth`: Controls the width (amplitude) of the oscillation.
+ * - Z-axis Positioning: The sound source can be positioned along the Z-axis.
+ *   - `config.pannerZPos`: Sets the base Z position (e.g., slightly in front of the listener).
+ * - Reverb: Adds spaciousness using convolution reverb.
+ *   - `config.reverbMix`: Controls the wet/dry mix for the reverb.
+ * - Configurable parameters:
+ *   - `pannerXOscRate`: Speed of the X-axis panning LFO.
+ *   - `pannerXOscWidth`: Width/amplitude of the X-axis panning.
+ *   - `pannerZPos`: Base Z-axis position of the sound source.
+ *   - `reverbMix`: Wet/dry mix for reverb.
+ * - Gain Staging:
+ *   - The output is a mix of the direct (panned) sound and the reverberated sound.
+ *   - `directGain` is `1 - reverbMix`.
+ *   - `reverbWetGain` is `reverbMix`. If reverb is not loaded, directGain becomes 1.0.
+ * @param {AudioBuffer} inputBuffer - The original audio data.
+ * @param {object} userConfig - User-defined configuration for the effect.
+ * @returns {Promise<AudioBuffer>} A promise that resolves with the processed audio buffer.
+ */
+async function apply16DEffect(inputBuffer, userConfig = {}) {
+    const config = { ...currentAudioConfig['16d'], ...userConfig }; // Merge user config with defaults
+    console.log("[apply16DEffect] Received userConfig:", userConfig);
+    console.log("[apply16DEffect] Applying 16D effect with final merged config:", config);
+
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!window.OfflineAudioContext) {
+                reject(new Error("OfflineAudioContext is not supported by this browser."));
+                return;
+            }
+            const offlineCtx = new OfflineAudioContext(2, inputBuffer.length, inputBuffer.sampleRate);
+            let reverbSuccessfullyLoaded = false;
+            try {
+                reverbSuccessfullyLoaded = await loadReverbIr(offlineCtx, 'assets/irs/default_reverb.wav');
+            } catch (error) {
+                console.warn("Reverb IR loading failed or skipped, proceeding without reverb for 16D effect.", error);
+            }
+
+            const audioSource = offlineCtx.createBufferSource();
+            audioSource.buffer = inputBuffer;
+
+            const panner = offlineCtx.createPanner();
+            panner.panningModel = 'HRTF';
+            panner.distanceModel = 'inverse';
+            panner.positionX.value = 0; // Initial X position, will be modulated
+            panner.positionY.value = 0; // Fixed Y position for 16D
+            panner.positionZ.value = config.pannerZPos;
+            console.log(`[apply16DEffect] Setting panner.positionZ.value to: ${config.pannerZPos}`);
+
+            const lfoX = offlineCtx.createOscillator();
+            lfoX.type = 'sine';
+            lfoX.frequency.value = config.pannerXOscRate;
+            console.log(`[apply16DEffect] Setting lfoX.frequency.value to: ${config.pannerXOscRate}`);
+
+            const lfoXDepth = offlineCtx.createGain();
+            lfoXDepth.gain.value = config.pannerXOscWidth;
+            console.log(`[apply16DEffect] Setting lfoXDepth.gain.value to: ${config.pannerXOscWidth}`);
+
+            lfoX.connect(lfoXDepth);
+            lfoXDepth.connect(panner.positionX);
+
+            audioSource.connect(panner);
+
+            const directGain = offlineCtx.createGain();
+            panner.connect(directGain);
+            directGain.connect(offlineCtx.destination); // Connect direct path to destination
+
+            const reverbMix = config.reverbMix;
+            if (reverbSuccessfullyLoaded && reverbIrBuffer) {
+                const convolver = offlineCtx.createConvolver();
+                convolver.buffer = reverbIrBuffer;
+                convolver.normalize = true;
+                const reverbWetGain = offlineCtx.createGain();
+
+                panner.connect(convolver);
+                convolver.connect(reverbWetGain);
+                reverbWetGain.connect(offlineCtx.destination);
+
+                reverbWetGain.gain.value = reverbMix;
+                directGain.gain.value = 1 - reverbMix;
+                console.log(`[apply16DEffect] Reverb Loaded. Gains - Direct: ${(1 - reverbMix).toFixed(2)}, Reverb: ${reverbMix.toFixed(2)}`);
+            } else {
+                directGain.gain.value = 1.0;
+                console.log("[apply16DEffect] No Reverb. Gain - Direct: 1.0");
+            }
+
+            lfoX.start(0);
+            audioSource.start(0);
+
+            offlineCtx.startRendering()
+                .then(renderedBuffer => {
+                    resolve(renderedBuffer);
+                })
+                .catch(err => {
+                    reject(new Error("16D effect rendering failed: " + err.message));
+                });
+        } catch (error) {
+            reject(new Error("Error in apply16DEffect: " + error.message));
+        }
+    });
+}
+// --- End 16D Effect Function ---
+
+// --- 32D Effect Function ---
+/**
+ * Applies a 32D audio effect, creating a complex and immersive 3D sound field.
+ * Features:
+ * - 3D PannerNode: Utilizes `PannerNode` with 'HRTF' for realistic 3D sound positioning.
+ * - Multi-LFO Modulation: Three separate LFOs modulate the panner's X, Y, and Z positions.
+ *   This creates a less predictable, more enveloping movement compared to simpler effects.
+ *   - X-axis LFO (`lfoPanX`): Sine wave for smooth left-right movement.
+ *     - Controlled by `config.panXRate` (speed) and `config.panXWidth` (amplitude).
+ *   - Y-axis LFO (`lfoPanY`): Triangle wave for up-down movement.
+ *     - Controlled by `config.panYRate` (speed) and `config.panYWidth` (amplitude).
+ *   - Z-axis LFO (`lfoPanZ`): Sawtooth wave for front-back movement with a reset, creating a
+ *     sense of objects moving towards/away and then reappearing.
+ *     - Controlled by `config.panZRate` (speed) and `config.panZWidth` (amplitude).
+ * - Reverb: Convolution reverb adds to the sense of space.
+ *   - `config.reverbMix`: Controls the wet/dry mix.
+ * - Configurable parameters:
+ *   - `panXRate`, `panXWidth`: Speed and amplitude for X-axis LFO.
+ *   - `panYRate`, `panYWidth`: Speed and amplitude for Y-axis LFO.
+ *   - `panZRate`, `panZWidth`: Speed and amplitude for Z-axis LFO.
+ *   - `reverbMix`: Wet/dry mix for reverb.
+ * - Gain Staging:
+ *   - Similar to 16D, mixes direct (panned) sound and reverberated sound.
+ *   - `directGain` is `1 - reverbMix`.
+ *   - `reverbWetGain` is `reverbMix`. If reverb fails to load, `directGain` is 1.0.
+ * @param {AudioBuffer} inputBuffer - The original audio data.
+ * @param {object} userConfig - User-defined configuration for the effect.
+ * @returns {Promise<AudioBuffer>} A promise that resolves with the processed audio buffer.
+ */
+async function apply32DEffect(inputBuffer, userConfig = {}) {
+    const config = { ...currentAudioConfig['32d'], ...userConfig }; // Merge user config with defaults
+    console.log("[apply32DEffect] Received userConfig:", userConfig);
+    console.log("[apply32DEffect] Applying 32D effect with final merged config:", config);
+
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!window.OfflineAudioContext) {
+                reject(new Error("OfflineAudioContext is not supported by this browser."));
+                return;
+            }
+            const offlineCtx = new OfflineAudioContext(2, inputBuffer.length, inputBuffer.sampleRate);
+            let reverbSuccessfullyLoaded = false;
+            try {
+                reverbSuccessfullyLoaded = await loadReverbIr(offlineCtx, 'assets/irs/default_reverb.wav');
+            } catch (error) {
+                console.warn("Reverb IR loading failed or skipped, proceeding without reverb for 32D effect.", error);
+            }
+
+            const audioSource = offlineCtx.createBufferSource();
+            audioSource.buffer = inputBuffer;
+
+            const panner = offlineCtx.createPanner();
+            panner.panningModel = 'HRTF';
+            panner.distanceModel = 'inverse';
+            // Listener is at (0,0,0). Panner orientation default (forward).
+
+            // X-axis movement
+            const lfoPanX = offlineCtx.createOscillator();
+            lfoPanX.type = 'sine';
+            lfoPanX.frequency.value = config.panXRate;
+            console.log(`[apply32DEffect] Setting lfoPanX.frequency.value to: ${config.panXRate}`);
+            const lfoPanXDepth = offlineCtx.createGain();
+            lfoPanXDepth.gain.value = config.panXWidth;
+            console.log(`[apply32DEffect] Setting lfoPanXDepth.gain.value to: ${config.panXWidth}`);
+            lfoPanX.connect(lfoPanXDepth);
+            lfoPanXDepth.connect(panner.positionX);
+
+            // Y-axis movement
+            const lfoPanY = offlineCtx.createOscillator();
+            lfoPanY.type = 'triangle';
+            lfoPanY.frequency.value = config.panYRate;
+            console.log(`[apply32DEffect] Setting lfoPanY.frequency.value to: ${config.panYRate}`);
+            const lfoPanYDepth = offlineCtx.createGain();
+            lfoPanYDepth.gain.value = config.panYWidth;
+            console.log(`[apply32DEffect] Setting lfoPanYDepth.gain.value to: ${config.panYWidth}`);
+            lfoPanY.connect(lfoPanYDepth);
+            lfoPanYDepth.connect(panner.positionY);
+
+            // Z-axis movement
+            const lfoPanZ = offlineCtx.createOscillator();
+            lfoPanZ.type = 'sawtooth';
+            lfoPanZ.frequency.value = config.panZRate;
+            console.log(`[apply32DEffect] Setting lfoPanZ.frequency.value to: ${config.panZRate}`);
+            const lfoPanZDepth = offlineCtx.createGain();
+            lfoPanZDepth.gain.value = config.panZWidth;
+            console.log(`[apply32DEffect] Setting lfoPanZDepth.gain.value to: ${config.panZWidth}`);
+            lfoPanZ.connect(lfoPanZDepth);
+            lfoPanZDepth.connect(panner.positionZ);
+
+            audioSource.connect(panner);
+
+            const directGain = offlineCtx.createGain();
+            panner.connect(directGain);
+            directGain.connect(offlineCtx.destination); // Connect direct path to destination
+
+            const reverbMix = config.reverbMix;
+            if (reverbSuccessfullyLoaded && reverbIrBuffer) {
+                const convolver = offlineCtx.createConvolver();
+                convolver.buffer = reverbIrBuffer;
+                convolver.normalize = true;
+                const reverbWetGain = offlineCtx.createGain();
+
+                panner.connect(convolver);
+                convolver.connect(reverbWetGain);
+                reverbWetGain.connect(offlineCtx.destination);
+
+                reverbWetGain.gain.value = reverbMix;
+                directGain.gain.value = 1 - reverbMix;
+                console.log(`[apply32DEffect] Reverb Loaded. Gains - Direct: ${(1 - reverbMix).toFixed(2)}, Reverb: ${reverbMix.toFixed(2)}`);
+            } else {
+                directGain.gain.value = 1.0;
+                console.log("[apply32DEffect] No Reverb. Gain - Direct: 1.0");
+            }
+
+            lfoPanX.start(0);
+            lfoPanY.start(0);
+            lfoPanZ.start(0);
+            audioSource.start(0);
+
+            offlineCtx.startRendering()
+                .then(renderedBuffer => {
+                    resolve(renderedBuffer);
+                })
+                .catch(err => {
+                    reject(new Error("32D effect rendering failed: " + err.message));
+                });
+        } catch (error) {
+            reject(new Error("Error in apply32DEffect: " + error.message));
+        }
+    });
+}
+// --- End 32D Effect Function ---
 
 // --- Reverb IR Loading Function ---
 async function loadReverbIr(audioCtxForDecoding, irUrl = 'assets/irs/default_reverb.wav') {
