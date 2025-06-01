@@ -1,5 +1,9 @@
 console.log("main.js loaded");
 
+// --- Localization Globals ---
+let currentLanguage = 'ja'; // Default language
+let translations = {};
+
 // Web Audio API Setup
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 let currentSource = null;
@@ -14,7 +18,101 @@ let reverbIrBuffer = null;
 let irLoadingPromise = null; // To cache the promise during loading
 let irLoadedSuccessfully = false;
 
-// Placeholder for future JavaScript modules/sections
+
+// --- Localization Functions ---
+async function loadTranslations(lang) {
+    try {
+        const response = await fetch(`locales/${lang}.json`);
+        if (!response.ok) {
+            console.error(`Could not load ${lang}.json. Status: ${response.status}`);
+            return null; // Or load default 'ja' as fallback
+        }
+        translations = await response.json();
+        return translations;
+    } catch (error) {
+        console.error(`Error loading translations for ${lang}:`, error);
+        return null; // Or load default 'ja' as fallback
+    }
+}
+
+function applyTranslations() {
+    if (!translations) {
+        console.warn("No translations loaded. Skipping application.");
+        return;
+    }
+    document.querySelectorAll('[data-translate-key]').forEach(element => {
+        const key = element.getAttribute('data-translate-key');
+        const translation = translations[key];
+        if (translation) {
+            // Preserve child elements for elements like labels that might contain inputs
+            if (element.children.length > 0 && (element.tagName === 'LABEL' || element.tagName === 'P')) {
+                // Find the first text node and update it, or append if none
+                let textNode = Array.from(element.childNodes).find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '');
+                if (textNode) {
+                    textNode.textContent = translation;
+                } else {
+                    // This case might occur if a label's text is entirely within another element (e.g., a span)
+                    // and that inner element is the one with the data-translate-key.
+                    // If the key is on the outer element but text is inner, this simple update might not be ideal.
+                    // However, for current structure, direct text content update is mostly fine.
+                    // Fallback for complex structures or if no distinct text node found:
+                    element.textContent = translation;
+                }
+            } else {
+                element.textContent = translation;
+            }
+        } else {
+            console.warn(`Translation not found for key: ${key}`);
+        }
+    });
+    // Update dynamic text elements not covered by data-translate-key if any (e.g. title, though not requested yet)
+    // document.title = translations['pageTitle'] || 'Vastia'; // Example if we add a pageTitle key
+}
+
+async function setLanguage(lang) {
+    const loadedTranslations = await loadTranslations(lang);
+    if (loadedTranslations) {
+        currentLanguage = lang;
+        document.documentElement.lang = lang;
+        localStorage.setItem('userLanguage', lang);
+        applyTranslations();
+        // Special handling for dynamically generated messages after initial load
+        // This might involve re-initializing certain UI text if it's set outside applyTranslations
+        const fileNameElement = document.getElementById('fileName'); // Ensure it's defined in this scope or passed
+        const statusMessageElement = document.getElementById('statusMessage'); // Ensure it's defined
+
+        if (selectedFile && fileNameElement) {
+             fileNameElement.textContent = getTranslation('fileSelected', selectedFile.name);
+        } else if (fileNameElement) {
+            fileNameElement.textContent = getTranslation('noFileSelected');
+        }
+        // Clear status message or set to a default if needed
+        if (statusMessageElement) {
+            statusMessageElement.textContent = ''; // Clear it or set to a default translated prompt
+        }
+
+    } else {
+        console.error(`Failed to set language to ${lang} because translations could not be loaded.`);
+        // Optionally, try to load the default language 'ja' as a fallback
+        if (lang !== 'ja') {
+            console.log("Attempting to load default language 'ja'.");
+            await setLanguage('ja');
+        }
+    }
+}
+
+function getTranslation(key, ...args) {
+    let translation = translations[key] || key; // Fallback to key if not found
+    if (args.length > 0 && typeof translation === 'string') {
+        args.forEach((arg, index) => {
+            // Support {0}, {1}, ... and also {fileName} specifically for fileSelected
+            const placeholder = new RegExp(`\\{${index}\\}|\\{fileName\\}`, 'g');
+            translation = translation.replace(placeholder, arg);
+        });
+    }
+    return translation;
+}
+
 
 // File Upload Logic
 document.addEventListener('DOMContentLoaded', () => {
@@ -37,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log("Audio processing started...");
             if (loadingIndicator) loadingIndicator.classList.remove('hidden');
             if (statusMessageElement) {
-                statusMessageElement.textContent = ''; // Clear previous messages
+                statusMessageElement.textContent = ''; // Clear previous messages, or use getTranslation('processingStatusClear')
                 statusMessageElement.className = 'text-center my-3 font-medium'; // Reset class
             }
         } else {
@@ -46,22 +144,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         transformationRadios.forEach(radio => {
-            // Disable radios if processing, or if not processing but no audio is loaded
             radio.disabled = isProcessingActive || (!isProcessingActive && !originalAudioBuffer);
         });
 
-        // Play, Pause, Stop, Download buttons are managed by updateButtonStates,
-        // but should also be disabled during processing itself.
-        // However, to simplify, we'll let updateButtonStates handle them after processing.
-        // For immediate disabling *during* processing:
         if (playButton) playButton.disabled = isProcessingActive || playButton.disabled;
         if (pauseButton) pauseButton.disabled = isProcessingActive || pauseButton.disabled;
         if (stopButton) stopButton.disabled = isProcessingActive || stopButton.disabled;
         if (downloadButton) downloadButton.disabled = isProcessingActive || downloadButton.disabled;
 
-
         if (!isProcessingActive) {
-            // After processing finishes, re-evaluate button states based on audioBuffer
             updateButtonStates(audioContext.state === 'running' && currentSource, audioContext.state === 'suspended', !!audioBuffer, !!audioBuffer);
         }
     };
@@ -75,34 +166,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (fileUploadElement) {
         fileUploadElement.addEventListener('change', (event) => {
-            selectedFile = event.target.files[0]; // Store the selected file
+            selectedFile = event.target.files[0];
 
-            // Always stop audio if a new file is chosen or selection is cleared
             if (currentSource) {
                 currentSource.stop(0);
                 currentSource.disconnect();
                 currentSource = null;
             }
-            audioContext.resume().then(() => { // Ensure context is not suspended
+            audioContext.resume().then(() => {
                  if (audioContext.state === 'suspended') {
                     audioContext.resume();
                  }
             });
 
-
             if (selectedFile) {
-                console.log("File selected:");
-                console.log("Name:", selectedFile.name);
-                console.log("Type:", selectedFile.type);
-                if (fileNameElement) fileNameElement.textContent = `Selected: ${selectedFile.name}`;
-                if (statusMessageElement) { // Clear previous status messages
+                console.log("File selected:", selectedFile.name, selectedFile.type);
+                if (fileNameElement) fileNameElement.textContent = getTranslation('fileSelected', selectedFile.name);
+                if (statusMessageElement) {
                     statusMessageElement.textContent = '';
                     statusMessageElement.className = 'text-center my-3 font-medium';
                 }
-                transformationRadios.forEach(radio => radio.disabled = false); // Enable radios
-                updateButtonStates(false, false, false, false); // Disable playback buttons while loading
+                transformationRadios.forEach(radio => radio.disabled = false);
+                updateButtonStates(false, false, false, false);
 
-                // Reset HTML5 player and revoke old Object URL
                 if (html5AudioPlayer) {
                     if (currentPlayerObjectUrl) {
                         URL.revokeObjectURL(currentPlayerObjectUrl);
@@ -114,26 +200,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     audioContext.decodeAudioData(e.target.result, (buffer) => {
-                        originalAudioBuffer = buffer; // Store pristine buffer
-                        audioBuffer = originalAudioBuffer; // Initially, processed buffer is the original
+                        originalAudioBuffer = buffer;
+                        audioBuffer = originalAudioBuffer;
                         console.log('Audio decoded successfully.');
-                        updateButtonStates(false, false, !!audioBuffer, !!audioBuffer); // Enable play and download after decoding
+                        updateButtonStates(false, false, !!audioBuffer, !!audioBuffer);
 
-                        // Set HTML5 player to original audio initially
                         if (html5AudioPlayer && selectedFile) {
-                            if (currentPlayerObjectUrl) { // Should be null here due to above reset, but good practice
+                            if (currentPlayerObjectUrl) {
                                 URL.revokeObjectURL(currentPlayerObjectUrl);
                             }
-                            currentPlayerObjectUrl = URL.createObjectURL(selectedFile); // Use original file for initial preview
+                            currentPlayerObjectUrl = URL.createObjectURL(selectedFile);
                             html5AudioPlayer.src = currentPlayerObjectUrl;
                         }
-
                     }, (error) => {
                         console.error('Error decoding audio data:', error);
                         originalAudioBuffer = null;
                         audioBuffer = null;
                         selectedFile = null;
-                        updateButtonStates(false, false, false, false); // Keep buttons disabled
+                        updateButtonStates(false, false, false, false);
+                        if (statusMessageElement) statusMessageElement.textContent = getTranslation('audioDecodeError', error.message);
+
                     });
                 };
                 reader.onerror = (error) => {
@@ -142,16 +228,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     audioBuffer = null;
                     selectedFile = null;
                     updateButtonStates(false, false, false, false);
+                     if (statusMessageElement) statusMessageElement.textContent = getTranslation('fileReadError', error.message);
                 };
                 reader.readAsArrayBuffer(selectedFile);
 
             } else {
                 console.log("No file selected.");
-                if (fileNameElement) fileNameElement.textContent = ''; // Clear file name
+                if (fileNameElement) fileNameElement.textContent = getTranslation('noFileSelected');
                 originalAudioBuffer = null;
                 audioBuffer = null;
                 selectedFile = null;
-                transformationRadios.forEach(radio => radio.disabled = true); // Disable radios
+                transformationRadios.forEach(radio => radio.disabled = true);
                 if (html5AudioPlayer) {
                      if (currentPlayerObjectUrl) {
                         URL.revokeObjectURL(currentPlayerObjectUrl);
@@ -166,27 +253,20 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("File upload element not found.");
     }
 
-    // Disable transformation radios initially
     transformationRadios.forEach(radio => radio.disabled = true);
 
-    // Attempt to pre-load Reverb IR on page load using the main audioContext
-    // This is non-critical if it fails; effects can attempt loading it again.
     if (audioContext.state === 'suspended') {
         console.log("AudioContext is suspended. Reverb IR will be loaded on first use or after context resumes.");
-        // Optionally, trigger resume on first user interaction and then load.
-        // For now, we let apply8DEffect handle loading if this doesn't complete.
     }
     loadReverbIr(audioContext, 'assets/irs/default_reverb.wav').catch(error => {
         console.warn("Initial Reverb IR pre-loading failed. Will attempt again on first use.", error);
     });
 
-
-    // Playback Functions
     const playAudio = () => {
         if (audioContext.state === 'suspended') {
             audioContext.resume().then(() => {
                 console.log('AudioContext resumed.');
-                if (audioBuffer) { // Check buffer again after resume
+                if (audioBuffer) {
                     startPlayback();
                 }
             });
@@ -198,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const startPlayback = () => {
-        if (currentSource) { // Stop and clear existing source before playing again
+        if (currentSource) {
             currentSource.stop(0);
             currentSource.disconnect();
             currentSource = null;
@@ -212,14 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         currentSource.onended = () => {
             console.log('Audio playback finished.');
-            // currentSource.disconnect(); // Disconnect is good practice
-            // currentSource = null; // Allow re-play
-            // When playback ends, user should be able to play again if buffer exists, and download.
             updateButtonStates(false, false, !!audioBuffer, !!audioBuffer);
-            if (audioContext.state !== 'suspended') { // Avoid issues if manually stopped then ended
-                 // Reset currentTime to allow playing from the beginning next time.
-                 // This is implicitly handled by creating a new BufferSource each time.
-            }
         };
     };
 
@@ -232,25 +305,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Resume is handled by playAudio checking context state
-    // const resumeAudio = () => {
-    //     if (currentSource && audioContext.state === 'suspended') {
-    //         audioContext.resume().then(() => {
-    //             console.log('Audio resumed.');
-    //             updateButtonStates(true, false, true);
-    //         });
-    //     }
-    // };
-
     const stopAudio = () => {
         if (currentSource) {
             currentSource.stop(0);
-            // currentSource.disconnect(); // Disconnect happens in onended or before new play
-            // currentSource = null; // onended handles this to allow replay
             console.log('Audio stopped.');
-            // No need to reset currentTime explicitly for BufferSource, new source starts at 0
         }
-        // If context was suspended by pause, bring it back
         if (audioContext.state === 'suspended') {
             audioContext.resume().then(() => {
                  updateButtonStates(false, false, !!audioBuffer, !!audioBuffer);
@@ -260,21 +319,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Event Listeners for Buttons
-    if (playButton) {
-        playButton.addEventListener('click', playAudio);
-    }
-    if (pauseButton) {
-        pauseButton.addEventListener('click', pauseAudio);
-    }
-    if (stopButton) {
-        stopButton.addEventListener('click', stopAudio);
-    }
+    if (playButton) playButton.addEventListener('click', playAudio);
+    if (pauseButton) pauseButton.addEventListener('click', pauseAudio);
+    if (stopButton) stopButton.addEventListener('click', stopAudio);
 
-    // Initial button states (Play, Pause, Stop, Download)
     updateButtonStates(false, false, false, false);
 
-    // Download Button Event Listener
     if (downloadButton) {
         downloadButton.addEventListener('click', () => {
             if (audioBuffer && !isProcessing) {
@@ -297,25 +347,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 } catch (error) {
                     console.error("Error creating WAV file for download:", error);
-                    alert("Could not prepare audio for download. " + error.message);
+                    alert(getTranslation('downloadError', error.message));
                 }
             } else if (isProcessing) {
                 console.log("Cannot download while processing is active.");
-                alert("Please wait for audio processing to complete before downloading.");
+                alert(getTranslation('downloadWaitForProcessing'));
             } else {
                 console.log("No audio processed yet for download.");
-                alert("No audio available to download. Please upload and process a file first.");
+                alert(getTranslation('downloadNoAudio'));
             }
         });
     }
 
-    // Transformation Options Logic
-    // const transformationRadios = document.querySelectorAll('input[name="transformation"]'); // Already defined above
-    let selectedTransformation = '8d'; // Default value
+    let selectedTransformation = '8d';
 
-    if (transformationRadios.length > 0) { // Check if radios were found
+    if (transformationRadios.length > 0) {
         transformationRadios.forEach(radio => {
-            if (radio.checked) { // Initialize with the default checked value
+            if (radio.checked) {
                 selectedTransformation = radio.value;
             }
             radio.addEventListener('change', (event) => {
@@ -323,12 +371,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("Selected transformation:", selectedTransformation);
 
                 if (originalAudioBuffer && !isProcessing) {
-                    // Stop any currently playing audio before applying transformation
                     if (audioContext.state === 'running' && currentSource) {
                         console.log("Stopping current audio before transformation.");
-                        stopAudio(); // This will also update button states
+                        stopAudio();
                     }
-                    // Ensure audio context is running if it was suspended (e.g. by pause)
                     if (audioContext.state === 'suspended') {
                         audioContext.resume();
                     }
@@ -336,48 +382,41 @@ document.addEventListener('DOMContentLoaded', () => {
                     setProcessingState(true);
 
                     let effectPromise;
-                    let effectDisplayName; // For user-facing messages
+                    let effectDisplayName;
 
                     if (selectedTransformation === '8d') {
                         console.log(`Applying '8D Effect'...`);
                         effectPromise = apply8DEffect(originalAudioBuffer);
-                        effectDisplayName = "8D Effect";
+                        effectDisplayName = "8D Effect"; // This could be translated if needed: getTranslation('effectName8D')
                     } else if (selectedTransformation === '16d' || selectedTransformation === '32d') {
-                        // Use StereoWidening as a placeholder for 16D/32D
-                        effectDisplayName = `${selectedTransformation} (Stereo Widening placeholder)`;
+                        effectDisplayName = `${selectedTransformation}`; // getTranslation(`effectName${selectedTransformation}`)
                         console.log(`Applying placeholder '${effectDisplayName}'...`);
                         effectPromise = applyStereoWidening(originalAudioBuffer);
                     } else {
-                        // This case should ideally not be reached if radio values are fixed
-                        // but as a fallback, revert to original.
                         console.log(`No specific effect defined for '${selectedTransformation}'. Reverting to original.`);
                         audioBuffer = originalAudioBuffer;
                         if (statusMessageElement) {
-                            statusMessageElement.textContent = `No effect applied for '${selectedTransformation}'. Using original audio.`;
+                            statusMessageElement.textContent = getTranslation('noEffectApplied', selectedTransformation);
                             statusMessageElement.className = 'text-center my-3 font-medium text-gray-600';
                         }
-                         // Update HTML5 player to original if it was changed
                         if (html5AudioPlayer && selectedFile) {
                             if (currentPlayerObjectUrl) URL.revokeObjectURL(currentPlayerObjectUrl);
                             currentPlayerObjectUrl = URL.createObjectURL(selectedFile);
                             html5AudioPlayer.src = currentPlayerObjectUrl;
                         }
-                        setProcessingState(false); // End processing state
-                        // No actual promise to handle, or resolve immediately with original
+                        setProcessingState(false);
                         effectPromise = null;
                     }
 
                     if (effectPromise) {
                         effectPromise.then(renderedBuffer => {
                             audioBuffer = renderedBuffer;
-                            const successMsg = `'${effectDisplayName}' applied successfully.`;
+                            const successMsg = getTranslation('effectAppliedSuccess', effectDisplayName);
                             console.log(successMsg);
                             if (statusMessageElement) {
                                 statusMessageElement.textContent = successMsg;
                                 statusMessageElement.className = 'text-center my-3 font-medium text-green-600';
                             }
-
-                            // Update HTML5 player with transformed audio
                             if (html5AudioPlayer) {
                                 if (currentPlayerObjectUrl) URL.revokeObjectURL(currentPlayerObjectUrl);
                                 try {
@@ -391,14 +430,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         })
                         .catch(error => {
-                            const errorMsg = `Error applying '${effectDisplayName}': ${error.message}`;
+                            const errorMsg = getTranslation('effectAppliedError', effectDisplayName, error.message);
                             console.error(errorMsg);
                             if (statusMessageElement) {
                                 statusMessageElement.textContent = errorMsg;
                                 statusMessageElement.className = 'text-center my-3 font-medium text-red-600';
                             }
-                            audioBuffer = originalAudioBuffer; // Revert to original
-                            // Revert HTML5 player to original
+                            audioBuffer = originalAudioBuffer;
                             if (html5AudioPlayer && selectedFile) {
                                 if (currentPlayerObjectUrl) URL.revokeObjectURL(currentPlayerObjectUrl);
                                 currentPlayerObjectUrl = URL.createObjectURL(selectedFile);
@@ -412,93 +450,79 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 } else if (isProcessing) {
                     console.log("Cannot change transformation while processing is active.");
-                    // Optionally, revert radio button to previous state or show a message
-                    event.target.checked = false; // Quick way to prevent change, needs better UX
-                    // Re-check the previously selected radio button
                     const previouslyCheckedRadio = document.querySelector(`input[name="transformation"][value="${selectedTransformation}"]`);
                     if (previouslyCheckedRadio) previouslyCheckedRadio.checked = true;
                 }
-                // The case for !originalAudioBuffer is handled by radios being disabled.
             });
         });
-        console.log("Initial transformation:", selectedTransformation); // Log initial value
+        console.log("Initial transformation:", selectedTransformation);
     }
+
+    // Language Switcher Logic
+    const languageSwitcher = document.getElementById('language-switcher');
+    if (languageSwitcher) {
+        languageSwitcher.addEventListener('click', (event) => {
+            const target = event.target;
+            if (target.tagName === 'A' && target.dataset.lang) {
+                event.preventDefault();
+                const newLang = target.dataset.lang;
+                if (newLang !== currentLanguage) {
+                    setLanguage(newLang);
+                }
+            }
+        });
+    }
+
+    // Initial language load
+    const savedLanguage = localStorage.getItem('userLanguage');
+    const browserLanguage = navigator.language.split('-')[0]; // Get 'en' from 'en-US'
+    const supportedLanguages = ['ja', 'en', 'ko', 'zh', 'hi', 'es', 'fr'];
+    const initialLang = savedLanguage || (supportedLanguages.includes(browserLanguage) ? browserLanguage : 'ja');
+    setLanguage(initialLang);
 });
 
-// Transformation Function (Stereo Widening using Haas Effect) - Placeholder for 16D/32D perhaps
-function applyStereoWidening(inputBuffer) { // This can remain as a general widener for other options
+// Transformation Function (Stereo Widening using Haas Effect)
+function applyStereoWidening(inputBuffer) {
     return new Promise((resolve, reject) => {
         try {
-            // Ensure OfflineAudioContext is available
             if (!window.OfflineAudioContext) {
                 reject(new Error("OfflineAudioContext is not supported by this browser."));
                 return;
             }
-
-            const offlineCtx = new OfflineAudioContext(
-                2, // Always output stereo
-                inputBuffer.length,
-                inputBuffer.sampleRate
-            );
-
+            const offlineCtx = new OfflineAudioContext(2, inputBuffer.length, inputBuffer.sampleRate);
             const source = offlineCtx.createBufferSource();
             source.buffer = inputBuffer;
-
             const merger = offlineCtx.createChannelMerger(2);
 
-            if (inputBuffer.numberOfChannels === 1) { // Mono input
-                const delayNode = offlineCtx.createDelay(0.1); // Max delay of 0.1s, can be less
-                delayNode.delayTime.value = 0.02; // 20ms delay for Haas effect
-
-                source.connect(merger, 0, 0); // Left output of merger gets original mono
-
-                const gainNode = offlineCtx.createGain(); // Optional: slight gain adjustment for delayed signal
+            if (inputBuffer.numberOfChannels === 1) {
+                const delayNode = offlineCtx.createDelay(0.1);
+                delayNode.delayTime.value = 0.02;
+                source.connect(merger, 0, 0);
+                const gainNode = offlineCtx.createGain();
                 source.connect(gainNode);
                 gainNode.connect(delayNode);
-                delayNode.connect(merger, 0, 1); // Right output of merger gets delayed mono
-
-            } else { // Stereo input
+                delayNode.connect(merger, 0, 1);
+            } else {
                 const splitter = offlineCtx.createChannelSplitter(2);
                 source.connect(splitter);
-
-                const delayNode = offlineCtx.createDelay(0.1);
-                delayNode.delayTime.value = 0.02; // 20ms delay
-
-                // Original left channel to left output
-                splitter.connect(merger, 0, 0);
-
-                // Mix original right channel with a delayed version of the left channel for widening
-                // This is a common way to do Haas on stereo. Another is to delay one channel slightly.
-                // For simplicity here, let's try delaying the right channel itself slightly.
-                // splitter.connect(merger, 1, 1); // original right to right
-                // splitter.connect(delayNode, 0); // take left channel
-                // delayNode.connect(merger, 0, 1); // add delayed left to right (might be too much)
-
-                // Simpler: pass left as is, pass delayed right to right.
                 const rightChannelDelay = offlineCtx.createDelay(0.1);
-                rightChannelDelay.delayTime.value = 0.02; // Delay right channel
-
-                splitter.connect(merger, 0, 0); // Left channel to Merger's Left input
-                splitter.connect(rightChannelDelay, 1); // Right channel from splitter to delay
-                rightChannelDelay.connect(merger, 0, 1); // Delayed Right channel to Merger's Right input
+                rightChannelDelay.delayTime.value = 0.02;
+                splitter.connect(merger, 0, 0);
+                splitter.connect(rightChannelDelay, 1);
+                rightChannelDelay.connect(merger, 0, 1);
             }
-
             merger.connect(offlineCtx.destination);
             source.start(0);
-
             offlineCtx.startRendering().then(renderedBuffer => {
                 resolve(renderedBuffer);
             }).catch(err => {
                 reject(new Error("Rendering failed: " + err.message));
             });
-
         } catch (error) {
             reject(new Error("Error in applyStereoWidening: " + error.message));
         }
     });
 }
-// Audio Player Logic - Will be expanded
-// Download Logic
 
 // --- WAV Encoding Functions ---
 function audioBufferToWav(aBuffer) {
@@ -507,39 +531,30 @@ function audioBufferToWav(aBuffer) {
     const format = 1; // PCM
     const bitDepth = 16;
     const bytesPerSample = bitDepth / 8;
-
     let result;
     if (numChannels === 2) {
         result = interleave(aBuffer.getChannelData(0), aBuffer.getChannelData(1));
     } else {
         result = aBuffer.getChannelData(0);
     }
-
     const buffer = new ArrayBuffer(44 + result.length * bytesPerSample);
     const view = new DataView(buffer);
-
-    // RIFF chunk descriptor
     writeUTFBytes(view, 0, 'RIFF');
-    view.setUint32(4, 36 + result.length * bytesPerSample, true); // file length - 8
+    view.setUint32(4, 36 + result.length * bytesPerSample, true);
     writeUTFBytes(view, 8, 'WAVE');
-    // FMT sub-chunk
     writeUTFBytes(view, 12, 'fmt ');
-    view.setUint32(16, 16, true); // Subchunk1Size for PCM (16 bytes)
-    view.setUint16(20, format, true); // AudioFormat (1 for PCM)
+    view.setUint32(16, 16, true);
+    view.setUint16(20, format, true);
     view.setUint16(22, numChannels, true);
     view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * numChannels * bytesPerSample, true); // ByteRate
-    view.setUint16(32, numChannels * bytesPerSample, true); // BlockAlign
+    view.setUint32(28, sampleRate * numChannels * bytesPerSample, true);
+    view.setUint16(32, numChannels * bytesPerSample, true);
     view.setUint16(34, bitDepth, true);
-    // DATA sub-chunk
     writeUTFBytes(view, 36, 'data');
-    view.setUint32(40, result.length * bytesPerSample, true); // Subchunk2Size (data size)
-
-    // Write PCM samples
+    view.setUint32(40, result.length * bytesPerSample, true);
     let offset = 44;
     for (let i = 0; i < result.length; i++, offset += bytesPerSample) {
         let s = Math.max(-1, Math.min(1, result[i]));
-        // Write 16-bit samples
         view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
     }
     return new Blob([view], {type: 'audio/wav'});
@@ -565,137 +580,87 @@ function writeUTFBytes(view, offset, string) {
 // --- End WAV Encoding Functions ---
 
 // --- 8D Effect Function ---
-async function apply8DEffect(inputBuffer) { // Made async
-    return new Promise(async (resolve, reject) => { // Added async for promise executor
+async function apply8DEffect(inputBuffer) {
+    return new Promise(async (resolve, reject) => {
         try {
             if (!window.OfflineAudioContext) {
                 reject(new Error("OfflineAudioContext is not supported by this browser."));
                 return;
             }
-            // Always output stereo for 8D effect
             const offlineCtx = new OfflineAudioContext(2, inputBuffer.length, inputBuffer.sampleRate);
-
-            // Attempt to load Reverb IR (uses offlineCtx for decoding if IR not yet loaded)
             let reverbSuccessfullyLoaded = false;
             try {
-                // Pass offlineCtx for decoding if IR hasn't been loaded and cached yet.
-                // If audioContext (main) was used for pre-loading, this won't re-decode.
                 reverbSuccessfullyLoaded = await loadReverbIr(offlineCtx, 'assets/irs/default_reverb.wav');
             } catch (error) {
                 console.warn("Reverb IR loading failed or skipped, proceeding without reverb for 8D effect.", error);
             }
-
             const audioSource = offlineCtx.createBufferSource();
             audioSource.buffer = inputBuffer;
-
-            // Stereo Panner Node for left-right movement
             const stereoPanner = offlineCtx.createStereoPanner();
-
-            // LFO 1 for main panning
-            console.log("Setting up LFO Pan 1 for 8D effect.");
             const lfoPan1 = offlineCtx.createOscillator();
             lfoPan1.type = 'sine';
-            lfoPan1.frequency.value = 0.18; // Slightly adjusted main pan speed
-
+            lfoPan1.frequency.value = 0.18;
             const lfoPanDepth1 = offlineCtx.createGain();
-            lfoPanDepth1.gain.value = 0.8; // Reduced depth for LFO1
-
+            lfoPanDepth1.gain.value = 0.8;
             lfoPan1.connect(lfoPanDepth1);
             lfoPanDepth1.connect(stereoPanner.pan);
-
-            // LFO 2 for subtle panning perturbation
-            console.log("Setting up LFO Pan 2 for 8D effect.");
             const lfoPan2 = offlineCtx.createOscillator();
             lfoPan2.type = 'sine';
-            lfoPan2.frequency.value = 0.35; // Faster, different frequency
-
+            lfoPan2.frequency.value = 0.35;
             const lfoPanDepth2 = offlineCtx.createGain();
-            lfoPanDepth2.gain.value = 0.2; // Shallower depth for perturbation
-
+            lfoPanDepth2.gain.value = 0.2;
             lfoPan2.connect(lfoPanDepth2);
-            lfoPanDepth2.connect(stereoPanner.pan); // Also connects to the same .pan AudioParam
-
+            lfoPanDepth2.connect(stereoPanner.pan);
             audioSource.connect(stereoPanner);
-            let signalProcessingNode = stereoPanner; // Start with the panner output
-
-            // BiquadFilterNode Setup (Modulated Lowpass Filter)
-            console.log("Applying modulated lowpass filter in 8D effect.");
+            let signalProcessingNode = stereoPanner;
             const filterNode = offlineCtx.createBiquadFilter();
             filterNode.type = 'lowpass';
-            filterNode.frequency.value = 1000; // Nominal center frequency
-            filterNode.Q.value = 1; // Resonance
-
+            filterNode.frequency.value = 1000;
+            filterNode.Q.value = 1;
             const lfoFilter = offlineCtx.createOscillator();
             lfoFilter.type = 'sine';
-            lfoFilter.frequency.value = 0.15; // Slower than pan LFO
-
+            lfoFilter.frequency.value = 0.15;
             const lfoFilterDepth = offlineCtx.createGain();
-            lfoFilterDepth.gain.value = 800; // Sweep range for filter frequency (1000 +/- 800)
-
+            lfoFilterDepth.gain.value = 800;
             lfoFilter.connect(lfoFilterDepth);
-            lfoFilterDepth.connect(filterNode.frequency); // Modulate filter frequency
-
-            signalProcessingNode.connect(filterNode); // Connect panner output to filter input
-            signalProcessingNode = filterNode; // Output of filter is now the main signal
-
-            // Main direct signal path (gain will be adjusted based on effects)
+            lfoFilterDepth.connect(filterNode.frequency);
+            signalProcessingNode.connect(filterNode);
+            signalProcessingNode = filterNode;
             const directGain = offlineCtx.createGain();
-            signalProcessingNode.connect(directGain); // Connect filtered/panned signal
+            signalProcessingNode.connect(directGain);
             directGain.connect(offlineCtx.destination);
-
-            // Delay Path
-            console.log("Applying delay in 8D effect.");
-            const delayNode = offlineCtx.createDelay(5.0); // Max delay of 5 seconds
-            delayNode.delayTime.value = 0.35; // Delay time of 0.35 seconds
-
+            const delayNode = offlineCtx.createDelay(5.0);
+            delayNode.delayTime.value = 0.35;
             const feedbackGain = offlineCtx.createGain();
-            feedbackGain.gain.value = 0.4; // Feedback level for echo decay
-
+            feedbackGain.gain.value = 0.4;
             const delayWetGain = offlineCtx.createGain();
-            // delayWetGain.gain.value will be set below based on reverb status
-
-            // Connections for delay
-            signalProcessingNode.connect(delayNode); // Send filtered/panned audio to delay input
+            signalProcessingNode.connect(delayNode);
             delayNode.connect(feedbackGain);
-            feedbackGain.connect(delayNode); // Feedback loop: delay output back to its input via gain
-            delayNode.connect(delayWetGain); // Output of delay line to its own wet gain
-            delayWetGain.connect(offlineCtx.destination); // Connect delay output to main destination
+            feedbackGain.connect(delayNode);
+            delayNode.connect(delayWetGain);
+            delayWetGain.connect(offlineCtx.destination);
 
-
-            // Reverb Path
             if (reverbSuccessfullyLoaded && reverbIrBuffer) {
-                console.log("Applying reverb in 8D effect.");
                 const convolver = offlineCtx.createConvolver();
                 convolver.buffer = reverbIrBuffer;
-                convolver.normalize = true; // Good practice
-
+                convolver.normalize = true;
                 const reverbWetGain = offlineCtx.createGain();
-
-                signalProcessingNode.connect(convolver); // Send filtered/panned audio to convolver input
+                signalProcessingNode.connect(convolver);
                 convolver.connect(reverbWetGain);
                 reverbWetGain.connect(offlineCtx.destination);
-
-                // Adjust gains for 3-way mix: direct, delay, reverb
                 directGain.gain.value = 0.5;
                 delayWetGain.gain.value = 0.25;
                 reverbWetGain.gain.value = 0.25;
                 console.log("Gain staging: Direct=0.5, Delay=0.25, Reverb=0.25");
-
             } else {
-                console.log("Skipping reverb in 8D effect (IR not loaded or failed to load).");
-                // No reverb, so direct signal and delay make up the mix
                 directGain.gain.value = 0.6;
                 delayWetGain.gain.value = 0.4;
                 console.log("Gain staging: Direct=0.6, Delay=0.4 (No Reverb)");
             }
-
-            // Start the LFOs and the audio source
-            lfoPan1.start(0); // Renamed
-            lfoPan2.start(0); // Start LFO2
+            lfoPan1.start(0);
+            lfoPan2.start(0);
             lfoFilter.start(0);
             audioSource.start(0);
-
-            // Render the audio
             offlineCtx.startRendering()
                 .then(renderedBuffer => {
                     resolve(renderedBuffer);
@@ -703,7 +668,6 @@ async function apply8DEffect(inputBuffer) { // Made async
                 .catch(err => {
                     reject(new Error("8D effect rendering failed: " + err.message));
                 });
-
         } catch (error) {
             reject(new Error("Error in apply8DEffect: " + error.message));
         }
@@ -715,17 +679,13 @@ async function apply8DEffect(inputBuffer) { // Made async
 async function loadReverbIr(audioCtxForDecoding, irUrl = 'assets/irs/default_reverb.wav') {
     if (irLoadedSuccessfully && reverbIrBuffer) {
         console.log("Reverb IR already loaded.");
-        return true; // Indicates IR is ready
+        return true;
     }
-
     if (irLoadingPromise) {
         console.log("Reverb IR loading is already in progress. Awaiting existing promise.");
-        return irLoadingPromise; // Return existing promise to avoid re-fetching
+        return irLoadingPromise;
     }
-
     console.log("Loading Reverb IR from:", irUrl);
-    // isProcessing = true; // Removed: Let irLoadingPromise handle its own state tracking
-
     irLoadingPromise = new Promise(async (resolve, reject) => {
         try {
             const response = await fetch(irUrl);
@@ -733,27 +693,26 @@ async function loadReverbIr(audioCtxForDecoding, irUrl = 'assets/irs/default_rev
                 throw new Error(`HTTP error! status: ${response.status} while fetching ${irUrl}`);
             }
             const arrayBuffer = await response.arrayBuffer();
-            // Use the provided audio context for decoding
             audioCtxForDecoding.decodeAudioData(arrayBuffer,
                 (decodedBuffer) => {
                     reverbIrBuffer = decodedBuffer;
                     irLoadedSuccessfully = true;
                     console.log("Reverb IR loaded and decoded successfully.");
-                    irLoadingPromise = null; // Clear the promise cache
+                    irLoadingPromise = null;
                     resolve(true);
                 },
                 (error) => {
                     console.error("Error decoding Reverb IR:", error);
                     irLoadedSuccessfully = false;
                     irLoadingPromise = null;
-                    reject(error); // Reject the promise
+                    reject(error);
                 }
             );
         } catch (error) {
             console.error("Failed to fetch Reverb IR:", error);
             irLoadedSuccessfully = false;
             irLoadingPromise = null;
-            reject(error); // Reject the promise
+            reject(error);
         }
     });
     return irLoadingPromise;
