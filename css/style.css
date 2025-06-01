@@ -1,6 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
 
+/* ==========================================================================
+   1. DESIGN TOKENS (VARIABLES)
+   ========================================================================== */
 :root {
+    /* Existing Color Palette */
     --win-primary-accent: #0078D4;
     --win-primary-accent-hover: #005A9E; /* Darker shade for hover */
     --win-background-light: #F3F3F3;
@@ -16,17 +20,61 @@
     --win-rounded-sm: 4px;
     --win-rounded-md: 6px;
     --win-rounded-lg: 8px;
+
+    /* Spacing Tokens */
+    --spacing-unit: 4px;
+    --spacing-xs: var(--spacing-unit);    /* 4px */
+    --spacing-sm: calc(var(--spacing-unit) * 2);  /* 8px */
+    --spacing-md: calc(var(--spacing-unit) * 4);  /* 16px */
+    --spacing-lg: calc(var(--spacing-unit) * 6);  /* 24px */
+    --spacing-xl: calc(var(--spacing-unit) * 8);  /* 32px */
+
+    /* Animation Timing & Easing Tokens */
+    --anim-duration-fast: 150ms;
+    --anim-duration-normal: 300ms;
+    --anim-duration-slow: 500ms;
+    --anim-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --anim-ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --anim-ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+    /* State Color Tokens */
+    --color-success: #107C10; /* Windows Green */
+    --color-success-bg: rgba(16, 124, 16, 0.1);
+    --color-warning: #FFB900; /* Windows Yellow */
+    --color-warning-bg: rgba(255, 185, 0, 0.1);
+    --color-error: #D83B01;   /* Windows Red */
+    --color-error-bg: rgba(216, 59, 1, 0.1);
+    --color-info: var(--win-primary-accent); /* Use accent blue for info */
+    --color-info-bg: rgba(0, 120, 212, 0.1);
+
+    /* More Surface/Text Shades */
+    --win-surface-light-hover: rgba(0, 0, 0, 0.05); /* For subtle hover on light surfaces */
+    --win-text-disabled: #A1A1A1;
+
+    /* Border Style Tokens */
+    --border-standard: 1px solid var(--win-surface-light-border);
+    --border-interactive: 1px solid var(--win-primary-accent);
 }
 
+/* ==========================================================================
+   2. BASE STYLES
+   ========================================================================== */
 body {
-    /* Base background color, if not overridden by Tailwind on body itself */
     background-color: var(--win-background-light);
     color: var(--win-text-primary);
+    font-family: 'Noto Sans JP', sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-/* Placeholder for future custom styles */
+*, *::before, *::after {
+    box-sizing: inherit;
+}
 
-/* Ensure hidden inputs are truly hidden but accessible */
+/* ==========================================================================
+   3. LAYOUT UTILITIES
+   ========================================================================== */
 .sr-only {
     position: absolute;
     width: 1px;
@@ -39,35 +87,264 @@ body {
     border-width: 0;
 }
 
-.acrylic-surface {
-    background-color: var(--win-surface-light-transparent); /* Defined as rgba(255, 255, 255, 0.8) */
-    backdrop-filter: blur(20px) saturate(180%); /* saturate is often part of Fluent design's acrylic */
-    -webkit-backdrop-filter: blur(20px) saturate(180%); /* For Safari */
-    border: 1px solid var(--win-surface-light-border); /* Ensure borders are still visible */
+/* ==========================================================================
+   4. COMPONENT STYLES & INDICATORS
+   ========================================================================== */
+.c-card {
+    background-color: var(--win-surface-light-transparent);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: var(--border-standard);
+    border-radius: var(--win-rounded-lg);
 }
 
-/* Style for radio button labels */
-.win-radio-label {
+.c-button {
     border-radius: var(--win-rounded-md);
-    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    /* Other styles for the label are already in index.html or handled by Tailwind peer utilities */
+    transition: background-color var(--anim-duration-fast) var(--anim-ease-out),
+                border-color var(--anim-duration-fast) var(--anim-ease-out),
+                color var(--anim-duration-fast) var(--anim-ease-out),
+                transform var(--anim-duration-fast) var(--anim-ease-out),
+                box-shadow var(--anim-duration-fast) var(--anim-ease-out);
+    cursor: pointer;
 }
 
-/* Hover effect for unchecked radio button labels */
-.win-radio-label:not(.peer-checked):hover {
-    background-color: rgba(0, 0, 0, 0.05); /* Subtle dark hover */
+.c-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* Style for buttons */
-.win-button {
+.c-button:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    filter: brightness(0.95);
+}
+
+.c-button:disabled,
+.c-button[disabled] {
+    opacity: 0.6;
+    transform: translateY(0);
+    box-shadow: none;
+    cursor: not-allowed;
+    filter: none;
+}
+
+.c-button:disabled:hover,
+.c-button[disabled]:hover {
+    transform: translateY(0);
+    box-shadow: none;
+    filter: none;
+}
+
+.c-radio-label {
     border-radius: var(--win-rounded-md);
-    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    /* Other styles for buttons are in index.html or handled by Tailwind utilities */
+    transition: background-color var(--anim-duration-fast) var(--anim-ease-out),
+                border-color var(--anim-duration-fast) var(--anim-ease-out),
+                box-shadow var(--anim-duration-fast) var(--anim-ease-out),
+                transform var(--anim-duration-fast) var(--anim-ease-out);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
 }
 
-/* General button/label styling for focus-visible */
-.win-button:focus-visible,
-.win-radio-label:focus-visible { /* Using focus-visible for better accessibility */
+.c-radio-label:not(.peer-checked):hover {
+    background-color: var(--win-surface-light-hover);
+    border-color: var(--win-primary-accent);
+    transform: translateY(-1px) scale(1.01);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.c-radio-label.peer-checked {
+    transform: scale(1.03);
+    box-shadow: 0 4px 12px rgba(0, 120, 212, 0.2), 0 0 0 2px var(--win-primary-accent);
+}
+
+.c-radio-label.peer-checked:hover {
+    transform: translateY(-1px) scale(1.03);
+    box-shadow: 0 6px 14px rgba(0, 120, 212, 0.25), 0 0 0 2px var(--win-primary-accent);
+}
+
+.c-radio-label.peer-checked::after {
+    content: '';
+    position: absolute;
+    top: calc(50% - 8px);
+    right: var(--spacing-sm);
+    width: 5px;
+    height: 10px;
+    border: solid var(--win-primary-accent);
+    border-width: 0 2px 2px 0;
+    transform: translateY(-50%) rotate(45deg) scale(1);
+    opacity: 0;
+    animation: fadeInCheckmark var(--anim-duration-normal) var(--anim-ease-out) forwards;
+    animation-delay: var(--anim-duration-fast);
+}
+
+.c-radio-label:active {
+    transform: translateY(0px) scale(0.98);
+    filter: brightness(0.98);
+}
+
+.c-file-upload-area {
+    background-color: var(--win-surface-light);
+    border: 2px dashed var(--win-surface-light-border);
+    border-radius: var(--win-rounded-lg);
+    padding: var(--spacing-xl);
+    text-align: center;
+    transition: background-color var(--anim-duration-fast) var(--anim-ease-out), border-color var(--anim-duration-fast) var(--anim-ease-out);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 150px;
+}
+
+.c-file-upload-area:hover,
+.c-file-upload-area.is-dragover {
+    border-color: var(--win-primary-accent);
+    background-color: var(--color-info-bg);
+}
+
+.c-file-upload-area .upload-prompt-text {
+    color: var(--win-text-secondary);
+    margin-bottom: var(--spacing-md);
+}
+
+.c-file-upload-area .c-button {
+    margin-bottom: var(--spacing-sm);
+}
+
+.c-file-upload-area #fileName {
+    color: var(--win-text-primary);
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(var(--spacing-sm));
+}
+
+.c-file-upload-area #fileName.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity var(--anim-duration-normal) var(--anim-ease-out), transform var(--anim-duration-normal) var(--anim-ease-out);
+    transition-delay: var(--anim-duration-fast);
+}
+
+/* Loading Indicator Container */
+#loadingIndicator {
+    opacity: 0; /* Hidden by default, JS adds .is-visible */
+    transition: opacity var(--anim-duration-normal) var(--anim-ease-out);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-md);
+}
+
+#loadingIndicator.is-visible {
+    opacity: 1;
+}
+
+#loadingIndicator .loading-text {
+    color: var(--win-text-secondary);
+    font-size: 1em;
+    margin-bottom: var(--spacing-md);
+}
+
+/* Custom Loader: Pulsing Dots Example */
+.c-loader-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.c-loader-dots .dot {
+    background-color: var(--win-primary-accent);
+    width: var(--spacing-sm);
+    height: var(--spacing-sm);
+    border-radius: 50%;
+    margin: 0 var(--spacing-xs);
+    animation: pulseDot 1.4s infinite ease-in-out both;
+}
+
+.c-loader-dots .dot:nth-child(1) { animation-delay: -0.32s; }
+.c-loader-dots .dot:nth-child(2) { animation-delay: -0.16s; }
+/* .c-loader-dots .dot:nth-child(3) { animation-delay: 0s; } */
+
+
+.c-button:focus-visible,
+.c-radio-label:focus-visible {
     outline: 2px solid var(--win-primary-accent);
     outline-offset: 2px;
+}
+
+/* ==========================================================================
+   5. ANIMATION KEYFRAMES & UTILITIES
+   ========================================================================== */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(var(--spacing-md));
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInCheckmark {
+    from {
+        opacity: 0;
+        transform: translateY(-50%) rotate(45deg) scale(0.5);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(-50%) rotate(45deg) scale(1);
+    }
+}
+
+@keyframes pulseDot {
+    0%, 80%, 100% { transform: scale(0.5); opacity: 0.5; }
+    40% { transform: scale(1.0); opacity: 1; }
+}
+
+/* Status Message Animations */
+@keyframes slideInUpFade {
+    from {
+        opacity: 0;
+        transform: translateY(var(--spacing-md));
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+#statusMessage.is-visible {
+    animation: slideInUpFade var(--anim-duration-normal) var(--anim-ease-out) forwards;
+}
+
+#statusMessage.is-hiding {
+    animation: fadeOut var(--anim-duration-slow) var(--anim-ease-out) forwards;
+}
+
+.u-anim-fadeIn {
+    animation: fadeIn var(--anim-duration-normal) var(--anim-ease-out) forwards;
+}
+
+.u-anim-fadeInUp-on-load {
+    opacity: 0;
+    animation: fadeInUp var(--anim-duration-slow) var(--anim-ease-out) forwards;
+    animation-delay: var(--anim-duration-fast);
+}
+
+.c-animated-section {
+    opacity: 0;
+    animation: fadeInUp var(--anim-duration-normal) var(--anim-ease-out) forwards;
 }
