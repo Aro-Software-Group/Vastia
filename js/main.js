@@ -318,60 +318,81 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     setProcessingState(true);
 
-                    // For now, only "8d" triggers stereo widening as a demo.
-                    // Other values will just revert to original or do nothing new.
-                    // In a real scenario, each value would map to a different effect.
-                    if (selectedTransformation === '8d' || selectedTransformation === '16d' || selectedTransformation === '32d') { // Apply to all for now
-                        console.log(`Applying placeholder '${selectedTransformation}' effect (Stereo Widening)...`);
-                        applyStereoWidening(originalAudioBuffer)
-                            .then(renderedBuffer => {
-                                audioBuffer = renderedBuffer; // Update the main audioBuffer with processed audio
-                                const successMsg = `Placeholder '${selectedTransformation}' effect (Stereo Widening) applied successfully.`;
-                                console.log(successMsg);
-                                if (statusMessageElement) {
-                                    statusMessageElement.textContent = successMsg;
-                                    statusMessageElement.className = 'text-center my-3 font-medium text-green-600';
-                                }
+                    let effectPromise;
+                    let effectDisplayName; // For user-facing messages
 
-                                // Update HTML5 player with transformed audio
-                                if (html5AudioPlayer) {
-                                    if (currentPlayerObjectUrl) {
-                                        URL.revokeObjectURL(currentPlayerObjectUrl);
-                                    }
-                                    try {
-                                        const playerWavBlob = audioBufferToWav(audioBuffer); // Use current audioBuffer
-                                        currentPlayerObjectUrl = URL.createObjectURL(playerWavBlob);
-                                        html5AudioPlayer.src = currentPlayerObjectUrl;
-                                        console.log("HTML5 player updated with transformed audio.");
-                                    } catch (wavError) {
-                                        console.error("Error creating WAV for HTML5 player:", wavError);
-                                    }
-                                }
-                            })
-                            .catch(error => {
-                                const errorMsg = `Error applying placeholder '${selectedTransformation}' (Stereo Widening) effect: ${error.message}`;
-                                console.error(errorMsg);
-                                if (statusMessageElement) {
-                                    statusMessageElement.textContent = errorMsg;
-                                    statusMessageElement.className = 'text-center my-3 font-medium text-red-600';
-                                }
-                                audioBuffer = originalAudioBuffer; // Revert to original on error
-                                // Revert HTML5 player to original audio if processing failed
-                                if (html5AudioPlayer && selectedFile) {
-                                     if (currentPlayerObjectUrl) {
-                                        URL.revokeObjectURL(currentPlayerObjectUrl);
-                                    }
-                                    currentPlayerObjectUrl = URL.createObjectURL(selectedFile);
-                                    html5AudioPlayer.src = currentPlayerObjectUrl;
-                                    console.log("HTML5 player reverted to original audio due to processing error.");
-                                }
-                            })
-                            .finally(() => {
-                                setProcessingState(false);
-                                // updateButtonStates will be called by setProcessingState(false)
-                            });
+                    if (selectedTransformation === '8d') {
+                        console.log(`Applying '8D Effect'...`);
+                        effectPromise = apply8DEffect(originalAudioBuffer);
+                        effectDisplayName = "8D Effect";
+                    } else if (selectedTransformation === '16d' || selectedTransformation === '32d') {
+                        // Use StereoWidening as a placeholder for 16D/32D
+                        effectDisplayName = `${selectedTransformation} (Stereo Widening placeholder)`;
+                        console.log(`Applying placeholder '${effectDisplayName}'...`);
+                        effectPromise = applyStereoWidening(originalAudioBuffer);
+                    } else {
+                        // This case should ideally not be reached if radio values are fixed
+                        // but as a fallback, revert to original.
+                        console.log(`No specific effect defined for '${selectedTransformation}'. Reverting to original.`);
+                        audioBuffer = originalAudioBuffer;
+                        if (statusMessageElement) {
+                            statusMessageElement.textContent = `No effect applied for '${selectedTransformation}'. Using original audio.`;
+                            statusMessageElement.className = 'text-center my-3 font-medium text-gray-600';
+                        }
+                         // Update HTML5 player to original if it was changed
+                        if (html5AudioPlayer && selectedFile) {
+                            if (currentPlayerObjectUrl) URL.revokeObjectURL(currentPlayerObjectUrl);
+                            currentPlayerObjectUrl = URL.createObjectURL(selectedFile);
+                            html5AudioPlayer.src = currentPlayerObjectUrl;
+                        }
+                        setProcessingState(false); // End processing state
+                        // No actual promise to handle, or resolve immediately with original
+                        effectPromise = null;
                     }
-                    // Removed unreachable else block here
+
+                    if (effectPromise) {
+                        effectPromise.then(renderedBuffer => {
+                            audioBuffer = renderedBuffer;
+                            const successMsg = `'${effectDisplayName}' applied successfully.`;
+                            console.log(successMsg);
+                            if (statusMessageElement) {
+                                statusMessageElement.textContent = successMsg;
+                                statusMessageElement.className = 'text-center my-3 font-medium text-green-600';
+                            }
+
+                            // Update HTML5 player with transformed audio
+                            if (html5AudioPlayer) {
+                                if (currentPlayerObjectUrl) URL.revokeObjectURL(currentPlayerObjectUrl);
+                                try {
+                                    const playerWavBlob = audioBufferToWav(audioBuffer);
+                                    currentPlayerObjectUrl = URL.createObjectURL(playerWavBlob);
+                                    html5AudioPlayer.src = currentPlayerObjectUrl;
+                                    console.log("HTML5 player updated with transformed audio.");
+                                } catch (wavError) {
+                                    console.error("Error creating WAV for HTML5 player:", wavError);
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            const errorMsg = `Error applying '${effectDisplayName}': ${error.message}`;
+                            console.error(errorMsg);
+                            if (statusMessageElement) {
+                                statusMessageElement.textContent = errorMsg;
+                                statusMessageElement.className = 'text-center my-3 font-medium text-red-600';
+                            }
+                            audioBuffer = originalAudioBuffer; // Revert to original
+                            // Revert HTML5 player to original
+                            if (html5AudioPlayer && selectedFile) {
+                                if (currentPlayerObjectUrl) URL.revokeObjectURL(currentPlayerObjectUrl);
+                                currentPlayerObjectUrl = URL.createObjectURL(selectedFile);
+                                html5AudioPlayer.src = currentPlayerObjectUrl;
+                                console.log("HTML5 player reverted to original audio due to processing error.");
+                            }
+                        })
+                        .finally(() => {
+                            setProcessingState(false);
+                        });
+                    }
                 } else if (isProcessing) {
                     console.log("Cannot change transformation while processing is active.");
                     // Optionally, revert radio button to previous state or show a message
@@ -387,8 +408,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Transformation Function (Stereo Widening using Haas Effect)
-function applyStereoWidening(inputBuffer) {
+// Transformation Function (Stereo Widening using Haas Effect) - Placeholder for 16D/32D perhaps
+function applyStereoWidening(inputBuffer) { // This can remain as a general widener for other options
     return new Promise((resolve, reject) => {
         try {
             // Ensure OfflineAudioContext is available
@@ -525,3 +546,55 @@ function writeUTFBytes(view, offset, string) {
     }
 }
 // --- End WAV Encoding Functions ---
+
+// --- 8D Effect Function ---
+function apply8DEffect(inputBuffer) {
+    return new Promise((resolve, reject) => {
+        try {
+            if (!window.OfflineAudioContext) {
+                reject(new Error("OfflineAudioContext is not supported by this browser."));
+                return;
+            }
+            // Always output stereo for 8D effect
+            const offlineCtx = new OfflineAudioContext(2, inputBuffer.length, inputBuffer.sampleRate);
+
+            const audioSource = offlineCtx.createBufferSource();
+            audioSource.buffer = inputBuffer;
+
+            // Stereo Panner Node for left-right movement
+            const stereoPanner = offlineCtx.createStereoPanner();
+
+            // LFO to control the panning
+            const lfoPan = offlineCtx.createOscillator();
+            lfoPan.type = 'sine'; // Smooth oscillation
+            lfoPan.frequency.value = 0.2; // Controls speed of panning (e.g., 0.2 Hz = 5 seconds per cycle)
+
+            const lfoPanDepth = offlineCtx.createGain();
+            lfoPanDepth.gain.value = 1.0; // Pan from -1 (hard left) to 1 (hard right)
+
+            lfoPan.connect(lfoPanDepth);
+            lfoPanDepth.connect(stereoPanner.pan); // Modulate the pan AudioParam
+
+            // Connect audio path
+            audioSource.connect(stereoPanner);
+            stereoPanner.connect(offlineCtx.destination);
+
+            // Start the LFO and the audio source
+            lfoPan.start(0);
+            audioSource.start(0);
+
+            // Render the audio
+            offlineCtx.startRendering()
+                .then(renderedBuffer => {
+                    resolve(renderedBuffer);
+                })
+                .catch(err => {
+                    reject(new Error("8D effect rendering failed: " + err.message));
+                });
+
+        } catch (error) {
+            reject(new Error("Error in apply8DEffect: " + error.message));
+        }
+    });
+}
+// --- End 8D Effect Function ---
