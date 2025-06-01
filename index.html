@@ -8,60 +8,63 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="font-['Noto_Sans_JP',_sans-serif]">
-    <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+    <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 u-anim-fadeIn">
         <header class="mb-10">
             <!-- Placeholder for Header/Branding area -->
             <h1 class="text-4xl sm:text-5xl font-bold text-center text-[var(--win-primary-accent)] py-4">Vastia</h1>
         </header>
 
         <main>
-            <section id="file-upload" class="p-6 shadow-lg mb-8 acrylic-surface rounded-[var(--win-rounded-lg)]">
+            <section id="file-upload" class="mb-8 c-file-upload-area c-animated-section" style="animation-delay: 200ms;">
                 <h2 class="text-2xl font-semibold text-[var(--win-text-primary)] mb-4 text-center">1. Upload Your Audio</h2>
-                <div class="flex flex-col items-center">
-                    <label for="fileUpload" class="bg-[var(--win-primary-accent)] hover:bg-[var(--win-primary-accent-hover)] text-[var(--win-text-on-accent)] font-bold py-3 px-6 rounded-[var(--win-rounded-md)] cursor-pointer inline-block transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--win-primary-accent)]">
-                        Select Audio/Video File
-                    </label>
-                    <input type="file" id="fileUpload" accept="audio/*,video/*" class="hidden">
-                    <p id="fileName" class="mt-3 text-[var(--win-text-secondary)] text-sm"></p> <!-- For displaying selected file name -->
-                </div>
+                <!-- Content will be centered by .c-file-upload-area flex properties -->
+                <p class="upload-prompt-text text-lg">Click the button below or drag files here (drag not functional yet)</p>
+                <label for="fileUpload" class="c-button bg-[var(--win-primary-accent)] hover:bg-[var(--win-primary-accent-hover)] text-[var(--win-text-on-accent)] font-bold py-3 px-6 cursor-pointer inline-block focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--win-primary-accent)]">
+                    Select Audio/Video File
+                </label>
+                <input type="file" id="fileUpload" accept="audio/*,video/*" class="hidden">
+                <p id="fileName" class="text-sm"></p> <!-- Tailwind 'mt-3' removed, CSS handles positioning/appearance -->
             </section>
 
-            <section id="transformation-options" class="p-6 shadow-lg mb-8 acrylic-surface rounded-[var(--win-rounded-lg)]">
+            <section id="transformation-options" class="p-6 shadow-lg mb-8 c-card rounded-[var(--win-rounded-lg)] c-animated-section" style="animation-delay: 350ms;">
                 <h2 class="text-2xl font-semibold text-[var(--win-text-primary)] mb-4 text-center">2. Choose Transformation</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                     <div>
                         <input type="radio" id="transform8d" name="transformation" value="8d" checked class="sr-only peer">
-                        <label for="transform8d" class="win-radio-label block cursor-pointer p-4 rounded-[var(--win-rounded-md)] border border-[var(--win-surface-light-border)] peer-checked:border-[var(--win-primary-accent)] peer-checked:ring-2 peer-checked:ring-[var(--win-primary-accent)] peer-checked:bg-[var(--win-primary-accent)]/10 hover:bg-black/5">
+                        <label for="transform8d" class="c-radio-label block cursor-pointer p-4 rounded-[var(--win-rounded-md)] border border-[var(--win-surface-light-border)] peer-checked:border-[var(--win-primary-accent)] peer-checked:ring-2 peer-checked:ring-[var(--win-primary-accent)] peer-checked:bg-[var(--win-primary-accent)]/10 hover:bg-black/5">
                             <span class="text-lg font-medium text-[var(--win-text-primary)]">8D Audio</span>
                         </label>
                     </div>
                     <div>
                         <input type="radio" id="transform16d" name="transformation" value="16d" class="sr-only peer">
-                        <label for="transform16d" class="win-radio-label block cursor-pointer p-4 rounded-[var(--win-rounded-md)] border border-[var(--win-surface-light-border)] peer-checked:border-[var(--win-primary-accent)] peer-checked:ring-2 peer-checked:ring-[var(--win-primary-accent)] peer-checked:bg-[var(--win-primary-accent)]/10 hover:bg-black/5">
+                        <label for="transform16d" class="c-radio-label block cursor-pointer p-4 rounded-[var(--win-rounded-md)] border border-[var(--win-surface-light-border)] peer-checked:border-[var(--win-primary-accent)] peer-checked:ring-2 peer-checked:ring-[var(--win-primary-accent)] peer-checked:bg-[var(--win-primary-accent)]/10 hover:bg-black/5">
                             <span class="text-lg font-medium text-[var(--win-text-primary)]">16D Audio</span>
                         </label>
                     </div>
                     <div>
                         <input type="radio" id="transform32d" name="transformation" value="32d" class="sr-only peer">
-                        <label for="transform32d" class="win-radio-label block cursor-pointer p-4 rounded-[var(--win-rounded-md)] border border-[var(--win-surface-light-border)] peer-checked:border-[var(--win-primary-accent)] peer-checked:ring-2 peer-checked:ring-[var(--win-primary-accent)] peer-checked:bg-[var(--win-primary-accent)]/10 hover:bg-black/5">
+                        <label for="transform32d" class="c-radio-label block cursor-pointer p-4 rounded-[var(--win-rounded-md)] border border-[var(--win-surface-light-border)] peer-checked:border-[var(--win-primary-accent)] peer-checked:ring-2 peer-checked:ring-[var(--win-primary-accent)] peer-checked:bg-[var(--win-primary-accent)]/10 hover:bg-black/5">
                             <span class="text-lg font-medium text-[var(--win-text-primary)]">32D Audio</span>
                         </label>
                     </div>
                 </div>
-                <div id="loadingIndicator" class="hidden text-center my-4">
-                    <p class="text-[var(--win-primary-accent)] font-semibold">Processing audio...</p>
-                    <!-- Basic spinner using Tailwind CSS -->
-                    <div class="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-[var(--win-primary-accent)] mt-2"></div>
+                <div id="loadingIndicator" class="text-center my-4"> <!-- 'hidden' class removed, opacity handles it -->
+                    <p class="loading-text font-semibold">Processing audio...</p> <!-- class added -->
+                    <div class="c-loader-dots"> <!-- New custom loader -->
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
                 </div>
                 <div id="statusMessage" class="text-center my-3 font-medium"></div>
             </section>
 
-            <section id="audio-preview" class="p-6 shadow-lg mb-8 acrylic-surface rounded-[var(--win-rounded-lg)]">
+            <section id="audio-preview" class="p-6 shadow-lg mb-8 c-card rounded-[var(--win-rounded-lg)] c-animated-section" style="animation-delay: 500ms;">
                 <h2 class="text-2xl font-semibold text-[var(--win-text-primary)] mb-4 text-center">3. Preview & Adjust</h2>
                 <div class="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-3 mt-4 mb-6">
-                    <button id="playButton" disabled class="win-button w-full sm:w-auto bg-green-600 hover:bg-green-700 text-[var(--win-text-on-accent)] font-semibold py-2 px-6 rounded-[var(--win-rounded-md)] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--win-primary-accent)]">Play</button>
-                    <button id="pauseButton" disabled class="win-button w-full sm:w-auto bg-yellow-500 hover:bg-yellow-600 text-[var(--win-text-primary)] font-semibold py-2 px-6 rounded-[var(--win-rounded-md)] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--win-primary-accent)]">Pause</button>
-                    <button id="stopButton" disabled class="win-button w-full sm:w-auto bg-red-600 hover:bg-red-700 text-[var(--win-text-on-accent)] font-semibold py-2 px-6 rounded-[var(--win-rounded-md)] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--win-primary-accent)]">Stop</button>
+                    <button id="playButton" disabled class="c-button w-full sm:w-auto bg-green-600 hover:bg-green-700 text-[var(--win-text-on-accent)] font-semibold py-2 px-6 rounded-[var(--win-rounded-md)] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--win-primary-accent)]">Play</button>
+                    <button id="pauseButton" disabled class="c-button w-full sm:w-auto bg-yellow-500 hover:bg-yellow-600 text-[var(--win-text-primary)] font-semibold py-2 px-6 rounded-[var(--win-rounded-md)] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--win-primary-accent)]">Pause</button>
+                    <button id="stopButton" disabled class="c-button w-full sm:w-auto bg-red-600 hover:bg-red-700 text-[var(--win-text-on-accent)] font-semibold py-2 px-6 rounded-[var(--win-rounded-md)] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--win-primary-accent)]">Stop</button>
                 </div>
                 <div>
                     <h3 class="text-lg font-medium text-[var(--win-text-secondary)] mb-2 text-center sm:text-left">HTML5 Player (Original File):</h3>
@@ -69,10 +72,10 @@
                 </div>
             </section>
 
-            <section id="download" class="p-6 shadow-lg acrylic-surface rounded-[var(--win-rounded-lg)]">
+            <section id="download" class="p-6 shadow-lg c-card rounded-[var(--win-rounded-lg)] c-animated-section" style="animation-delay: 650ms;">
                 <h2 class="text-2xl font-semibold text-[var(--win-text-primary)] mb-4 text-center">4. Download</h2>
                 <div class="text-center">
-                    <button id="downloadButton" disabled class="win-button bg-[var(--win-primary-accent)] hover:bg-[var(--win-primary-accent-hover)] text-[var(--win-text-on-accent)] font-bold py-3 px-8 rounded-[var(--win-rounded-md)] disabled:opacity-50 text-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--win-primary-accent)]">
+                    <button id="downloadButton" disabled class="c-button bg-[var(--win-primary-accent)] hover:bg-[var(--win-primary-accent-hover)] text-[var(--win-text-on-accent)] font-bold py-3 px-8 rounded-[var(--win-rounded-md)] disabled:opacity-50 text-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--win-primary-accent)]">
                         Download Transformed Audio
                     </button>
                 </div>
