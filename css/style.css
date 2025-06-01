@@ -1,14 +1,30 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
 
+:root {
+    --win-primary-accent: #0078D4;
+    --win-primary-accent-hover: #005A9E; /* Darker shade for hover */
+    --win-background-light: #F3F3F3;
+    --win-surface-light: #FFFFFF; /* For elements like cards, was E9E9E9, but white is common for surfaces */
+    --win-surface-light-transparent: rgba(255, 255, 255, 0.8); /* For acrylic effect */
+    --win-surface-light-border: #E0E0E0; /* Border for light surfaces */
+    --win-text-primary: #1A1A1A; /* Near black for primary text */
+    --win-text-secondary: #505050; /* Softer gray for secondary text */
+    --win-text-tertiary: #767676; /* Even softer for less important text */
+    --win-text-on-accent: #FFFFFF; /* Text on accent background */
+
+    /* Standard rounded corner values */
+    --win-rounded-sm: 4px;
+    --win-rounded-md: 6px;
+    --win-rounded-lg: 8px;
+}
+
 body {
     /* Base background color, if not overridden by Tailwind on body itself */
-    /* background-color: #f0f0f0; */
+    background-color: var(--win-background-light);
+    color: var(--win-text-primary);
 }
 
 /* Placeholder for future custom styles */
-
-/* Custom styles for radio button labels if needed beyond Tailwind peer styling */
-/* For example, a custom checkmark or other indicator if desired */
 
 /* Ensure hidden inputs are truly hidden but accessible */
 .sr-only {
@@ -21,4 +37,37 @@ body {
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border-width: 0;
+}
+
+.acrylic-surface {
+    background-color: var(--win-surface-light-transparent); /* Defined as rgba(255, 255, 255, 0.8) */
+    backdrop-filter: blur(20px) saturate(180%); /* saturate is often part of Fluent design's acrylic */
+    -webkit-backdrop-filter: blur(20px) saturate(180%); /* For Safari */
+    border: 1px solid var(--win-surface-light-border); /* Ensure borders are still visible */
+}
+
+/* Style for radio button labels */
+.win-radio-label {
+    border-radius: var(--win-rounded-md);
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    /* Other styles for the label are already in index.html or handled by Tailwind peer utilities */
+}
+
+/* Hover effect for unchecked radio button labels */
+.win-radio-label:not(.peer-checked):hover {
+    background-color: rgba(0, 0, 0, 0.05); /* Subtle dark hover */
+}
+
+/* Style for buttons */
+.win-button {
+    border-radius: var(--win-rounded-md);
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    /* Other styles for buttons are in index.html or handled by Tailwind utilities */
+}
+
+/* General button/label styling for focus-visible */
+.win-button:focus-visible,
+.win-radio-label:focus-visible { /* Using focus-visible for better accessibility */
+    outline: 2px solid var(--win-primary-accent);
+    outline-offset: 2px;
 }
