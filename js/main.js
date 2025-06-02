@@ -18,6 +18,7 @@ let currentPlayerObjectUrl = null; // For managing the HTML5 player's Object URL
 // let irLoadingPromise = null;
 // let irLoadedSuccessfully = false;
 let irArrayBufferPromise = null;
+let selectedTransformation = '8d'; // Default transformation
 
 // Configuration Variables
 // Stores default and current configurations for all audio effects.
@@ -417,8 +418,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
-    let selectedTransformation = '8d'; // Default transformation
 
     // Setup transformation radio change listeners
     const localTransformationRadios = document.querySelectorAll('input[name="transformation"]');
