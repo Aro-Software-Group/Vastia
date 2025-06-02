@@ -670,33 +670,67 @@ function populateConfigOptions(effectType) {
     document.querySelectorAll('.config-slider').forEach(slider => {
         const displayId = slider.id + 'Value';
         const valueDisplay = document.getElementById(displayId);
-        const effectKey = slider.id.substring(0, slider.id.indexOf('P') > -1 ? slider.id.indexOf('P') : slider.id.indexOf('L') > -1 ? slider.id.indexOf('L') : slider.id.indexOf('F') > -1 ? slider.id.indexOf('F') : slider.id.indexOf('R') > -1 ? slider.id.indexOf('R') : slider.id.indexOf('D')); //e.g. 8d from 8dPanSpeed
-        const configKey = slider.id.substring(2); //e.g. PanSpeed from 8dPanSpeed
-        let formattedConfigKey = configKey.charAt(0).toLowerCase() + configKey.slice(1); // panSpeed
-         // Special handling for keys like lfoPanDepth1, pannerXOscRate etc.
-        if (slider.id.includes('LfoPanDepth1')) formattedConfigKey = 'lfoPanDepth1';
-        else if (slider.id.includes('LfoPanDepth2')) formattedConfigKey = 'lfoPanDepth2';
-        else if (slider.id.includes('FilterFreq')) formattedConfigKey = 'filterFreq';
-        else if (slider.id.includes('lfoFilterSpeed')) formattedConfigKey = 'lfoFilterSpeed';
-        else if (slider.id.includes('ReverbMix')) formattedConfigKey = 'reverbMix';
-        else if (slider.id.includes('DelayMix')) formattedConfigKey = 'delayMix';
-        else if (slider.id.includes('OscRate')) formattedConfigKey = 'pannerXOscRate';
-        else if (slider.id.includes('OscWidth')) formattedConfigKey = 'pannerXOscWidth';
-        else if (slider.id.includes('ZPos')) formattedConfigKey = 'pannerZPos';
-        else if (slider.id.includes('PanXRate')) formattedConfigKey = 'panXRate';
-        else if (slider.id.includes('PanXWidth')) formattedConfigKey = 'panXWidth';
-        else if (slider.id.includes('PanYRate')) formattedConfigKey = 'panYRate';
-        else if (slider.id.includes('PanYWidth')) formattedConfigKey = 'panYWidth';
-        else if (slider.id.includes('PanZRate')) formattedConfigKey = 'panZRate';
-        else if (slider.id.includes('PanZWidth')) formattedConfigKey = 'panZWidth';
 
+        let effectKey;
+        let rawConfigKey; // Not directly used for formattedConfigKey in the final logic, but good for clarity
+
+        if (slider.id.startsWith('8d')) {
+            effectKey = '8d';
+            rawConfigKey = slider.id.substring(2); // Remove "8d" prefix
+        } else if (slider.id.startsWith('16d')) {
+            effectKey = '16d';
+            rawConfigKey = slider.id.substring(3); // Remove "16d" prefix
+        } else if (slider.id.startsWith('32d')) {
+            effectKey = '32d';
+            rawConfigKey = slider.id.substring(3); // Remove "32d" prefix
+        } else {
+            console.error('Could not determine effectKey for slider ID:', slider.id);
+            return; // Skip this slider if effectKey is unknown
+        }
+
+        let formattedConfigKey;
+
+        // Refined formattedConfigKey logic based on original explicit mappings
+        if (effectKey === '8d') {
+            if (slider.id.includes('PanSpeed')) formattedConfigKey = 'panSpeed';
+            else if (slider.id.includes('LfoPanDepth1')) formattedConfigKey = 'lfoPanDepth1';
+            else if (slider.id.includes('LfoPanDepth2')) formattedConfigKey = 'lfoPanDepth2';
+            else if (slider.id.includes('FilterFreq')) formattedConfigKey = 'filterFreq';
+            else if (slider.id.includes('lfoFilterSpeed')) formattedConfigKey = 'lfoFilterSpeed';
+            else if (slider.id.includes('ReverbMix')) formattedConfigKey = 'reverbMix';
+            else if (slider.id.includes('DelayMix')) formattedConfigKey = 'delayMix';
+        } else if (effectKey === '16d') {
+            if (slider.id.includes('OscRate')) formattedConfigKey = 'pannerXOscRate';
+            else if (slider.id.includes('OscWidth')) formattedConfigKey = 'pannerXOscWidth';
+            else if (slider.id.includes('ZPos')) formattedConfigKey = 'pannerZPos';
+            else if (slider.id.includes('ReverbMix')) formattedConfigKey = 'reverbMix';
+        } else if (effectKey === '32d') {
+            if (slider.id.includes('PanXRate')) formattedConfigKey = 'panXRate';
+            else if (slider.id.includes('PanXWidth')) formattedConfigKey = 'panXWidth';
+            else if (slider.id.includes('PanYRate')) formattedConfigKey = 'panYRate';
+            else if (slider.id.includes('PanYWidth')) formattedConfigKey = 'panYWidth';
+            else if (slider.id.includes('PanZRate')) formattedConfigKey = 'panZRate';
+            else if (slider.id.includes('PanZWidth')) formattedConfigKey = 'panZWidth';
+            else if (slider.id.includes('ReverbMix')) formattedConfigKey = 'reverbMix';
+        }
+
+        // Ensure formattedConfigKey was actually found/set by the conditions above.
+        if (!formattedConfigKey) {
+            console.error(`Could not determine formattedConfigKey for slider ID: ${slider.id} within effectKey: ${effectKey}`);
+            return; // Skip if no specific mapping was found.
+        }
 
         slider.addEventListener('input', (e) => {
             const value = parseFloat(e.target.value);
-            const unit = (slider.id.toLowerCase().includes('rate') || slider.id.toLowerCase().includes('speed')) ? ' Hz' : '';
+            const unit = (slider.id.toLowerCase().includes('rate') || slider.id.toLowerCase().includes('speed') || slider.id.toLowerCase().includes('freq')) ? ' Hz' : '';
             valueDisplay.textContent = e.target.value + unit;
-            currentAudioConfig[effectKey][formattedConfigKey] = value;
-            console.log(`[populateConfigOptions] Updated currentAudioConfig['${effectKey}'].${formattedConfigKey} to: ${value}`);
+            // Ensure currentAudioConfig[effectKey] exists
+            if (currentAudioConfig[effectKey]) {
+                currentAudioConfig[effectKey][formattedConfigKey] = value;
+                console.log(`[populateConfigOptions] Updated currentAudioConfig['${effectKey}'].${formattedConfigKey} to: ${value}`);
+            } else {
+                console.error(`[populateConfigOptions] effectKey '${effectKey}' not found in currentAudioConfig.`);
+            }
         });
     });
 }
