@@ -14,9 +14,10 @@ let isProcessing = false; // To track if an audio transformation is in progress
 let currentPlayerObjectUrl = null; // For managing the HTML5 player's Object URL
 
 // Reverb IR
-let reverbIrBuffer = null;
-let irLoadingPromise = null; // To cache the promise during loading
-let irLoadedSuccessfully = false;
+// let reverbIrBuffer = null;
+// let irLoadingPromise = null;
+// let irLoadedSuccessfully = false;
+let irArrayBufferPromise = null;
 
 // Configuration Variables
 // Stores default and current configurations for all audio effects.
@@ -31,6 +32,12 @@ let currentAudioConfig = {
 // UI elements for the configuration panel
 let toggleConfigButton, configPanel, configOptionsContainer, applyConfigButton;
 
+// UI Elements that are widely used and initialized in DOMContentLoaded
+let fileNameElement = null;
+let statusMessageElement = null;
+let html5AudioPlayer = null;
+// playButton, pauseButton, stopButton, downloadButton, loadingIndicator, transformationRadios
+// will be fetched internally by updateButtonStates and setProcessingState.
 
 // --- Localization Functions ---
 async function loadTranslations(lang) {
@@ -126,62 +133,84 @@ function getTranslation(key, ...args) {
     return translation;
 }
 
+// Placed near the top of the script (global scope)
+const updateButtonStates = (isPlaying = false, isPaused = false, canPlay = false, canDownload = false) => {
+    const playBtn = document.getElementById('playButton');
+    const pauseBtn = document.getElementById('pauseButton');
+    const stopBtn = document.getElementById('stopButton');
+    const downloadBtn = document.getElementById('downloadButton');
+
+    if (playBtn) playBtn.disabled = isPlaying || !canPlay;
+    if (pauseBtn) pauseBtn.disabled = (!isPlaying || isPaused) || !canPlay;
+    if (stopBtn) stopBtn.disabled = (!isPlaying && !isPaused) || !canPlay;
+    if (downloadBtn) downloadBtn.disabled = !canDownload;
+};
+
+// Placed in global scope, after updateButtonStates
+const setProcessingState = (isProcessingActive) => {
+    isProcessing = isProcessingActive; // isProcessing is already global
+
+    const loadingIndicatorElem = document.getElementById('loadingIndicator');
+    const statusMessageElem = document.getElementById('statusMessage');
+    const radios = document.querySelectorAll('input[name="transformation"]');
+
+    if (isProcessingActive) {
+        console.log("Audio processing started...");
+        if (loadingIndicatorElem) loadingIndicatorElem.classList.remove('hidden');
+        if (statusMessageElem) {
+            statusMessageElem.textContent = '';
+            statusMessageElem.className = 'text-center my-3 font-medium';
+        }
+    } else {
+        console.log("Audio processing finished.");
+        if (loadingIndicatorElem) loadingIndicatorElem.classList.add('hidden');
+    }
+
+    if (radios) {
+        radios.forEach(radio => {
+            // originalAudioBuffer is global
+            radio.disabled = isProcessingActive || (!isProcessingActive && !originalAudioBuffer);
+        });
+    }
+
+    const playBtn = document.getElementById('playButton');
+    const pauseBtn = document.getElementById('pauseButton');
+    const stopBtn = document.getElementById('stopButton');
+    const downloadBtn = document.getElementById('downloadButton');
+
+    if (playBtn) playBtn.disabled = isProcessingActive || (originalAudioBuffer ? playBtn.disabled : true);
+    if (pauseBtn) pauseBtn.disabled = isProcessingActive || (originalAudioBuffer ? pauseBtn.disabled : true);
+    if (stopBtn) stopBtn.disabled = isProcessingActive || (originalAudioBuffer ? stopBtn.disabled : true);
+    if (downloadBtn) downloadBtn.disabled = isProcessingActive || (originalAudioBuffer ? downloadBtn.disabled : true);
+
+    if (!isProcessingActive) {
+         // audioContext, currentSource, audioBuffer are global.
+        updateButtonStates(audioContext.state === 'running' && currentSource, audioContext.state === 'suspended', !!audioBuffer, !!audioBuffer);
+    }
+};
 
 // File Upload Logic
 document.addEventListener('DOMContentLoaded', () => {
-    const fileUploadElement = document.getElementById('fileUpload');
-    const playButton = document.getElementById('playButton');
-    const pauseButton = document.getElementById('pauseButton');
-    const stopButton = document.getElementById('stopButton');
-    const html5AudioPlayer = document.getElementById('html5AudioPlayer');
-    const downloadButton = document.getElementById('downloadButton');
-    const fileNameElement = document.getElementById('fileName');
-    const transformationRadios = document.querySelectorAll('input[name="transformation"]');
-    const loadingIndicator = document.getElementById('loadingIndicator');
-    const statusMessageElement = document.getElementById('statusMessage');
+    const fileUploadElement = document.getElementById('fileUpload'); // Can remain local if only used here
 
-    // Config panel UI elements
-    toggleConfigButton = document.getElementById('toggleConfigButton'); // Button to show/hide the config panel
-    configPanel = document.getElementById('configPanel'); // The configuration panel itself
-    configOptionsContainer = document.getElementById('configOptionsContainer'); // Container where dynamic options are populated
-    applyConfigButton = document.getElementById('applyConfigButton'); // Button to re-apply effect with current settings
+    // Assign to global variables (those that are still global)
+    html5AudioPlayer = document.getElementById('html5AudioPlayer');
+    fileNameElement = document.getElementById('fileName');
+    statusMessageElement = document.getElementById('statusMessage');
 
-    // Function to manage UI state during processing
-    const setProcessingState = (isProcessingActive) => {
-        isProcessing = isProcessingActive;
+    // Config panel UI elements (already global, but ensure they are assigned here)
+    toggleConfigButton = document.getElementById('toggleConfigButton');
+    configPanel = document.getElementById('configPanel');
+    configOptionsContainer = document.getElementById('configOptionsContainer');
+    applyConfigButton = document.getElementById('applyConfigButton');
 
-        if (isProcessingActive) {
-            console.log("Audio processing started...");
-            if (loadingIndicator) loadingIndicator.classList.remove('hidden');
-            if (statusMessageElement) {
-                statusMessageElement.textContent = ''; // Clear previous messages, or use getTranslation('processingStatusClear')
-                statusMessageElement.className = 'text-center my-3 font-medium'; // Reset class
-            }
-        } else {
-            console.log("Audio processing finished.");
-            if (loadingIndicator) loadingIndicator.classList.add('hidden');
-        }
+    // Initialize event listeners for buttons that are now fetched internally by the functions
+    const playBtn = document.getElementById('playButton');
+    const pauseBtn = document.getElementById('pauseButton');
+    const stopBtn = document.getElementById('stopButton');
+    const downloadBtn = document.getElementById('downloadButton');
 
-        transformationRadios.forEach(radio => {
-            radio.disabled = isProcessingActive || (!isProcessingActive && !originalAudioBuffer);
-        });
-
-        if (playButton) playButton.disabled = isProcessingActive || playButton.disabled;
-        if (pauseButton) pauseButton.disabled = isProcessingActive || pauseButton.disabled;
-        if (stopButton) stopButton.disabled = isProcessingActive || stopButton.disabled;
-        if (downloadButton) downloadButton.disabled = isProcessingActive || downloadButton.disabled;
-
-        if (!isProcessingActive) {
-            updateButtonStates(audioContext.state === 'running' && currentSource, audioContext.state === 'suspended', !!audioBuffer, !!audioBuffer);
-        }
-    };
-
-    const updateButtonStates = (isPlaying = false, isPaused = false, canPlay = false, canDownload = false) => {
-        if (playButton) playButton.disabled = isPlaying || !canPlay;
-        if (pauseButton) pauseButton.disabled = (!isPlaying || isPaused) || !canPlay;
-        if (stopButton) stopButton.disabled = (!isPlaying && !isPaused) || !canPlay;
-        if (downloadButton) downloadButton.disabled = !canDownload;
-    };
+    // The definitions of setProcessingState and updateButtonStates are now global.
 
     if (fileUploadElement) {
         fileUploadElement.addEventListener('change', (event) => {
@@ -205,7 +234,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     statusMessageElement.textContent = '';
                     statusMessageElement.className = 'text-center my-3 font-medium';
                 }
-                transformationRadios.forEach(radio => radio.disabled = false);
+                // Enable radios - setProcessingState will handle disabling during processing
+                const localTransformationRadios = document.querySelectorAll('input[name="transformation"]');
+                if (localTransformationRadios) {
+                    localTransformationRadios.forEach(radio => radio.disabled = false);
+                }
                 updateButtonStates(false, false, false, false);
 
                 if (html5AudioPlayer) {
@@ -257,7 +290,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 originalAudioBuffer = null;
                 audioBuffer = null;
                 selectedFile = null;
-                transformationRadios.forEach(radio => radio.disabled = true);
+                const localTransformationRadios = document.querySelectorAll('input[name="transformation"]');
+                if (localTransformationRadios) {
+                    localTransformationRadios.forEach(radio => radio.disabled = true);
+                }
                 if (html5AudioPlayer) {
                      if (currentPlayerObjectUrl) {
                         URL.revokeObjectURL(currentPlayerObjectUrl);
@@ -272,13 +308,17 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("File upload element not found.");
     }
 
-    transformationRadios.forEach(radio => radio.disabled = true);
+    // Disable transformation radios initially
+    const initialTransformationRadios = document.querySelectorAll('input[name="transformation"]');
+    if (initialTransformationRadios) {
+        initialTransformationRadios.forEach(radio => radio.disabled = true);
+    }
 
     if (audioContext.state === 'suspended') {
         console.log("AudioContext is suspended. Reverb IR will be loaded on first use or after context resumes.");
     }
-    loadReverbIr(audioContext, 'assets/irs/default_reverb.wav').catch(error => {
-        console.warn("Initial Reverb IR pre-loading failed. Will attempt again on first use.", error);
+    getReverbIrArrayBuffer('assets/irs/default_reverb.wav').catch(error => { // Changed loadReverbIr to getReverbIrArrayBuffer
+        console.warn("Initial Reverb IR ArrayBuffer pre-fetching failed. Will attempt again on first use.", error);
     });
 
     const playAudio = () => {
@@ -338,14 +378,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    if (playButton) playButton.addEventListener('click', playAudio);
-    if (pauseButton) pauseButton.addEventListener('click', pauseAudio);
-    if (stopButton) stopButton.addEventListener('click', stopAudio);
+    if (playBtn) playBtn.addEventListener('click', playAudio);
+    if (pauseBtn) pauseBtn.addEventListener('click', pauseAudio);
+    if (stopBtn) stopBtn.addEventListener('click', stopAudio);
 
-    updateButtonStates(false, false, false, false);
+    updateButtonStates(false, false, false, false); // Initial state
 
-    if (downloadButton) {
-        downloadButton.addEventListener('click', () => {
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', () => {
             if (audioBuffer && !isProcessing) {
                 console.log("Preparing download for:", selectedTransformation);
                 try {
@@ -380,6 +420,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let selectedTransformation = '8d'; // Default transformation
 
+    // Setup transformation radio change listeners
+    const localTransformationRadios = document.querySelectorAll('input[name="transformation"]');
+    if (localTransformationRadios.length > 0) {
+        localTransformationRadios.forEach(radio => {
+            if (radio.checked) {
+                selectedTransformation = radio.value;
+            }
+            radio.addEventListener('change', (event) => {
+                selectedTransformation = event.target.value;
+                console.log("Selected transformation:", selectedTransformation);
+                if (configPanel && !configPanel.classList.contains('hidden')) {
+                    populateConfigOptions(selectedTransformation);
+                }
+                triggerAudioProcessing();
+            });
+        });
+        console.log("Initial transformation:", selectedTransformation);
+    }
+
+
     // Config Panel Toggle Logic
     // Handles showing and hiding the configuration panel.
     // When shown, it populates the panel with options for the currently selected effect.
@@ -405,27 +465,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 triggerAudioProcessing(); // Central function to handle effect application
             }
         });
-    }
-
-    if (transformationRadios.length > 0) {
-        transformationRadios.forEach(radio => {
-            if (radio.checked) {
-                selectedTransformation = radio.value;
-                // Optionally trigger initial processing or populate config if panel is visible by default
-            }
-            radio.addEventListener('change', (event) => {
-                selectedTransformation = event.target.value;
-                console.log("Selected transformation:", selectedTransformation);
-                if (configPanel && !configPanel.classList.contains('hidden')) {
-                    populateConfigOptions(selectedTransformation);
-                }
-                triggerAudioProcessing();
-            });
-        });
-        // Trigger processing for the default checked transformation if a file is already selected (e.g. page reload scenario)
-        // This might require checking if originalAudioBuffer exists from a previous session or if a file is auto-selected.
-        // For now, processing is primarily triggered by file selection or transformation change.
-        console.log("Initial transformation:", selectedTransformation);
     }
 
     // Language Switcher Logic
@@ -816,12 +855,29 @@ async function apply8DEffect(inputBuffer, userConfig = {}) {
                 return;
             }
             const offlineCtx = new OfflineAudioContext(2, inputBuffer.length, inputBuffer.sampleRate);
-            let reverbSuccessfullyLoaded = false;
+
+            let decodedReverbIrBuffer = null;
             try {
-                reverbSuccessfullyLoaded = await loadReverbIr(offlineCtx, 'assets/irs/default_reverb.wav');
+                const irArrayBuffer = await getReverbIrArrayBuffer('assets/irs/default_reverb.wav'); // Get the ArrayBuffer
+                if (irArrayBuffer) {
+                    // Decode the ArrayBuffer using the specific offlineCtx for this effect
+                    decodedReverbIrBuffer = await new Promise((res, rej) => {
+                        offlineCtx.decodeAudioData(
+                            irArrayBuffer.slice(0), // Use slice(0) to create a copy if needed
+                            (buffer) => res(buffer),
+                            (err) => {
+                                console.error(`Error decoding Reverb IR for ${offlineCtx.sampleRate}Hz context:`, err);
+                                rej(err); // Propagate error for this specific decoding attempt
+                            }
+                        );
+                    });
+                    console.log(`Reverb IR decoded successfully for 8D effect.`);
+                }
             } catch (error) {
-                console.warn("Reverb IR loading failed or skipped, proceeding without reverb for 8D effect.", error);
+                console.warn(`Reverb IR processing failed for 8D effect, proceeding without reverb. Error:`, error.message);
+                // decodedReverbIrBuffer remains null
             }
+
             const audioSource = offlineCtx.createBufferSource();
             audioSource.buffer = inputBuffer;
             const stereoPanner = offlineCtx.createStereoPanner();
@@ -890,13 +946,13 @@ async function apply8DEffect(inputBuffer, userConfig = {}) {
             let actualDirectGain = Math.max(0, 1 - configReverbMix - configDelayMix);
             let actualDelayGain = configDelayMix;
             let actualReverbGain = configReverbMix;
-            let reverbWetGain; // Declare for potential use
+            let reverbWetGain;
 
-            if (reverbSuccessfullyLoaded && reverbIrBuffer) {
+            if (decodedReverbIrBuffer) {
                 const convolver = offlineCtx.createConvolver();
-                convolver.buffer = reverbIrBuffer;
+                convolver.buffer = decodedReverbIrBuffer;
                 convolver.normalize = true;
-                reverbWetGain = offlineCtx.createGain(); // Initialize here
+                reverbWetGain = offlineCtx.createGain();
                 signalProcessingNode.connect(convolver);
                 convolver.connect(reverbWetGain);
                 reverbWetGain.connect(offlineCtx.destination);
@@ -904,20 +960,19 @@ async function apply8DEffect(inputBuffer, userConfig = {}) {
                 reverbWetGain.gain.value = actualReverbGain;
                 delayWetGain.gain.value = actualDelayGain;
                 directGain.gain.value = actualDirectGain;
-                console.log(`[apply8DEffect] Reverb Loaded. Gains - Direct: ${actualDirectGain.toFixed(2)}, Delay: ${actualDelayGain.toFixed(2)}, Reverb: ${actualReverbGain.toFixed(2)}`);
-            } else { // No Reverb: distribute reverb's portion to direct and delay proportionally
+                console.log(`[apply8DEffect] Reverb Active. Gains - Direct: ${actualDirectGain.toFixed(2)}, Delay: ${actualDelayGain.toFixed(2)}, Reverb: ${actualReverbGain.toFixed(2)}`);
+            } else {
                 const totalGainNoReverb = actualDirectGain + actualDelayGain;
                 if (totalGainNoReverb > 0) {
                     directGain.gain.value = (actualDirectGain / totalGainNoReverb) * (actualDirectGain + actualDelayGain + actualReverbGain);
                     delayWetGain.gain.value = (actualDelayGain / totalGainNoReverb) * (actualDirectGain + actualDelayGain + actualReverbGain);
-                } else { // If both direct and delay were 0, and reverb was also 0 (or not loaded)
-                    directGain.gain.value = 1; // Default to full direct if everything is zero
+                } else {
+                    directGain.gain.value = 1;
                     delayWetGain.gain.value = 0;
                 }
-                if(reverbWetGain) reverbWetGain.gain.value = 0; // Ensure reverb gain is 0 if node exists but not used
+                if(typeof reverbWetGain !== 'undefined' && reverbWetGain) reverbWetGain.gain.value = 0;
                 console.log(`[apply8DEffect] No Reverb. Gains - Direct: ${directGain.gain.value.toFixed(2)}, Delay: ${delayWetGain.gain.value.toFixed(2)}`);
             }
-            // console.log(`8D Gains: Direct=${directGain.gain.value.toFixed(2)}, Delay=${delayWetGain.gain.value.toFixed(2)}, Reverb=${reverbWetGain ? reverbWetGain.gain.value.toFixed(2) : 'N/A'}`); // More detailed logs above
 
             lfoPan1.start(0);
             lfoPan2.start(0);
@@ -975,11 +1030,27 @@ async function apply16DEffect(inputBuffer, userConfig = {}) {
                 return;
             }
             const offlineCtx = new OfflineAudioContext(2, inputBuffer.length, inputBuffer.sampleRate);
-            let reverbSuccessfullyLoaded = false;
+
+            let decodedReverbIrBuffer = null;
             try {
-                reverbSuccessfullyLoaded = await loadReverbIr(offlineCtx, 'assets/irs/default_reverb.wav');
+                const irArrayBuffer = await getReverbIrArrayBuffer('assets/irs/default_reverb.wav'); // Get the ArrayBuffer
+                if (irArrayBuffer) {
+                    // Decode the ArrayBuffer using the specific offlineCtx for this effect
+                    decodedReverbIrBuffer = await new Promise((res, rej) => {
+                        offlineCtx.decodeAudioData(
+                            irArrayBuffer.slice(0), // Use slice(0) to create a copy if needed
+                            (buffer) => res(buffer),
+                            (err) => {
+                                console.error(`Error decoding Reverb IR for ${offlineCtx.sampleRate}Hz context:`, err);
+                                rej(err); // Propagate error for this specific decoding attempt
+                            }
+                        );
+                    });
+                    console.log(`Reverb IR decoded successfully for 16D effect.`);
+                }
             } catch (error) {
-                console.warn("Reverb IR loading failed or skipped, proceeding without reverb for 16D effect.", error);
+                console.warn(`Reverb IR processing failed for 16D effect, proceeding without reverb. Error:`, error.message);
+                // decodedReverbIrBuffer remains null
             }
 
             const audioSource = offlineCtx.createBufferSource();
@@ -1012,11 +1083,13 @@ async function apply16DEffect(inputBuffer, userConfig = {}) {
             directGain.connect(offlineCtx.destination); // Connect direct path to destination
 
             const reverbMix = config.reverbMix;
-            if (reverbSuccessfullyLoaded && reverbIrBuffer) {
+            let reverbWetGain;
+
+            if (decodedReverbIrBuffer) {
                 const convolver = offlineCtx.createConvolver();
-                convolver.buffer = reverbIrBuffer;
+                convolver.buffer = decodedReverbIrBuffer;
                 convolver.normalize = true;
-                const reverbWetGain = offlineCtx.createGain();
+                reverbWetGain = offlineCtx.createGain();
 
                 panner.connect(convolver);
                 convolver.connect(reverbWetGain);
@@ -1024,9 +1097,10 @@ async function apply16DEffect(inputBuffer, userConfig = {}) {
 
                 reverbWetGain.gain.value = reverbMix;
                 directGain.gain.value = 1 - reverbMix;
-                console.log(`[apply16DEffect] Reverb Loaded. Gains - Direct: ${(1 - reverbMix).toFixed(2)}, Reverb: ${reverbMix.toFixed(2)}`);
+                console.log(`[apply16DEffect] Reverb Active. Gains - Direct: ${(1 - reverbMix).toFixed(2)}, Reverb: ${reverbMix.toFixed(2)}`);
             } else {
                 directGain.gain.value = 1.0;
+                if(typeof reverbWetGain !== 'undefined' && reverbWetGain) reverbWetGain.gain.value = 0; // Ensure reverb gain is 0 if node exists but not used
                 console.log("[apply16DEffect] No Reverb. Gain - Direct: 1.0");
             }
 
@@ -1088,11 +1162,27 @@ async function apply32DEffect(inputBuffer, userConfig = {}) {
                 return;
             }
             const offlineCtx = new OfflineAudioContext(2, inputBuffer.length, inputBuffer.sampleRate);
-            let reverbSuccessfullyLoaded = false;
+
+            let decodedReverbIrBuffer = null;
             try {
-                reverbSuccessfullyLoaded = await loadReverbIr(offlineCtx, 'assets/irs/default_reverb.wav');
+                const irArrayBuffer = await getReverbIrArrayBuffer('assets/irs/default_reverb.wav'); // Get the ArrayBuffer
+                if (irArrayBuffer) {
+                    // Decode the ArrayBuffer using the specific offlineCtx for this effect
+                    decodedReverbIrBuffer = await new Promise((res, rej) => {
+                        offlineCtx.decodeAudioData(
+                            irArrayBuffer.slice(0), // Use slice(0) to create a copy if needed
+                            (buffer) => res(buffer),
+                            (err) => {
+                                console.error(`Error decoding Reverb IR for ${offlineCtx.sampleRate}Hz context:`, err);
+                                rej(err); // Propagate error for this specific decoding attempt
+                            }
+                        );
+                    });
+                    console.log(`Reverb IR decoded successfully for 32D effect.`);
+                }
             } catch (error) {
-                console.warn("Reverb IR loading failed or skipped, proceeding without reverb for 32D effect.", error);
+                console.warn(`Reverb IR processing failed for 32D effect, proceeding without reverb. Error:`, error.message);
+                // decodedReverbIrBuffer remains null
             }
 
             const audioSource = offlineCtx.createBufferSource();
@@ -1143,11 +1233,13 @@ async function apply32DEffect(inputBuffer, userConfig = {}) {
             directGain.connect(offlineCtx.destination); // Connect direct path to destination
 
             const reverbMix = config.reverbMix;
-            if (reverbSuccessfullyLoaded && reverbIrBuffer) {
+            let reverbWetGain;
+
+            if (decodedReverbIrBuffer) {
                 const convolver = offlineCtx.createConvolver();
-                convolver.buffer = reverbIrBuffer;
+                convolver.buffer = decodedReverbIrBuffer;
                 convolver.normalize = true;
-                const reverbWetGain = offlineCtx.createGain();
+                reverbWetGain = offlineCtx.createGain();
 
                 panner.connect(convolver);
                 convolver.connect(reverbWetGain);
@@ -1155,9 +1247,10 @@ async function apply32DEffect(inputBuffer, userConfig = {}) {
 
                 reverbWetGain.gain.value = reverbMix;
                 directGain.gain.value = 1 - reverbMix;
-                console.log(`[apply32DEffect] Reverb Loaded. Gains - Direct: ${(1 - reverbMix).toFixed(2)}, Reverb: ${reverbMix.toFixed(2)}`);
+                console.log(`[apply32DEffect] Reverb Active. Gains - Direct: ${(1 - reverbMix).toFixed(2)}, Reverb: ${reverbMix.toFixed(2)}`);
             } else {
                 directGain.gain.value = 1.0;
+                if(typeof reverbWetGain !== 'undefined' && reverbWetGain) reverbWetGain.gain.value = 0; // Ensure reverb gain is 0 if node exists but not used
                 console.log("[apply32DEffect] No Reverb. Gain - Direct: 1.0");
             }
 
@@ -1181,45 +1274,30 @@ async function apply32DEffect(inputBuffer, userConfig = {}) {
 // --- End 32D Effect Function ---
 
 // --- Reverb IR Loading Function ---
-async function loadReverbIr(audioCtxForDecoding, irUrl = 'assets/irs/default_reverb.wav') {
-    if (irLoadedSuccessfully && reverbIrBuffer) {
-        console.log("Reverb IR already loaded.");
-        return true;
+// Fetches the Reverb IR file and returns a promise that resolves with its ArrayBuffer.
+// Caches the promise to avoid multiple fetches for the same IR.
+async function getReverbIrArrayBuffer(irUrl = 'assets/irs/default_reverb.wav') {
+    if (irArrayBufferPromise) {
+        console.log("Reverb IR ArrayBuffer fetch already in progress or completed. Returning cached promise.");
+        return irArrayBufferPromise;
     }
-    if (irLoadingPromise) {
-        console.log("Reverb IR loading is already in progress. Awaiting existing promise.");
-        return irLoadingPromise;
-    }
-    console.log("Loading Reverb IR from:", irUrl);
-    irLoadingPromise = new Promise(async (resolve, reject) => {
+
+    console.log("Fetching Reverb IR ArrayBuffer from:", irUrl);
+    irArrayBufferPromise = new Promise(async (resolve, reject) => {
         try {
             const response = await fetch(irUrl);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status} while fetching ${irUrl}`);
             }
             const arrayBuffer = await response.arrayBuffer();
-            audioCtxForDecoding.decodeAudioData(arrayBuffer,
-                (decodedBuffer) => {
-                    reverbIrBuffer = decodedBuffer;
-                    irLoadedSuccessfully = true;
-                    console.log("Reverb IR loaded and decoded successfully.");
-                    irLoadingPromise = null;
-                    resolve(true);
-                },
-                (error) => {
-                    console.error("Error decoding Reverb IR:", error);
-                    irLoadedSuccessfully = false;
-                    irLoadingPromise = null;
-                    reject(error);
-                }
-            );
+            console.log("Reverb IR ArrayBuffer fetched successfully.");
+            resolve(arrayBuffer);
         } catch (error) {
-            console.error("Failed to fetch Reverb IR:", error);
-            irLoadedSuccessfully = false;
-            irLoadingPromise = null;
+            console.error("Failed to fetch Reverb IR ArrayBuffer:", error);
+            irArrayBufferPromise = null; // Clear cache on error so it can be retried
             reject(error);
         }
     });
-    return irLoadingPromise;
+    return irArrayBufferPromise;
 }
 // --- End Reverb IR Loading Function ---
