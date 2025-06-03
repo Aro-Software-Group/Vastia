@@ -34,6 +34,7 @@ let currentAudioConfig = {
 let toggleConfigButton, configPanel, configOptionsContainer, applyConfigButton;
 
 // UI Elements that are widely used and initialized in DOMContentLoaded
+let fileUploadSection = null; // Added for drag and drop
 let fileNameElement = null;
 let statusMessageElement = null;
 let html5AudioPlayer = null;
@@ -195,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileUploadElement = document.getElementById('fileUpload'); // Can remain local if only used here
 
     // Assign to global variables (those that are still global)
+    fileUploadSection = document.getElementById('file-upload'); // Added for drag and drop
     html5AudioPlayer = document.getElementById('html5AudioPlayer');
     fileNameElement = document.getElementById('fileName');
     statusMessageElement = document.getElementById('statusMessage');
@@ -307,6 +309,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     } else {
         console.error("File upload element not found.");
+    }
+
+    // Drag and Drop Event Listeners
+    if (fileUploadSection) {
+        fileUploadSection.addEventListener('dragenter', (event) => {
+            event.preventDefault();
+            fileUploadSection.classList.add('c-file-upload-area--dragover');
+        });
+
+        fileUploadSection.addEventListener('dragover', (event) => {
+            event.preventDefault(); // Necessary to allow dropping
+            fileUploadSection.classList.add('c-file-upload-area--dragover');
+        });
+
+        fileUploadSection.addEventListener('dragleave', (event) => {
+            fileUploadSection.classList.remove('c-file-upload-area--dragover');
+        });
+
+        fileUploadSection.addEventListener('drop', (event) => {
+            event.preventDefault();
+            fileUploadSection.classList.remove('c-file-upload-area--dragover');
+            handleFileDrop(event);
+        });
     }
 
     // Disable transformation radios initially
@@ -488,6 +513,92 @@ document.addEventListener('DOMContentLoaded', () => {
     const initialLang = savedLanguage || (supportedLanguages.includes(browserLanguage) ? browserLanguage : 'ja');
     setLanguage(initialLang);
 });
+
+// --- Drag and Drop File Handling ---
+function handleFileDrop(event) {
+    event.preventDefault(); // Should have been called by 'drop' listener, but good practice
+    event.stopPropagation(); // Stop bubbling
+
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+        selectedFile = files[0]; // Assign to global selectedFile
+
+        if (currentSource) {
+            currentSource.stop(0);
+            currentSource.disconnect();
+            currentSource = null;
+        }
+        audioContext.resume().then(() => {
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        });
+
+        console.log("File dropped:", selectedFile.name, selectedFile.type);
+        if (fileNameElement) fileNameElement.textContent = getTranslation('fileSelected', selectedFile.name);
+        if (statusMessageElement) {
+            statusMessageElement.textContent = '';
+            statusMessageElement.className = 'text-center my-3 font-medium';
+        }
+
+        // Enable radios - setProcessingState will handle disabling during processing
+        const localTransformationRadios = document.querySelectorAll('input[name="transformation"]');
+        if (localTransformationRadios) {
+            localTransformationRadios.forEach(radio => radio.disabled = false);
+        }
+        updateButtonStates(false, false, false, false); // Reset button states
+
+        if (html5AudioPlayer) {
+            if (currentPlayerObjectUrl) {
+                URL.revokeObjectURL(currentPlayerObjectUrl);
+                currentPlayerObjectUrl = null;
+            }
+            html5AudioPlayer.src = ''; // Clear previous source
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            audioContext.decodeAudioData(e.target.result, (buffer) => {
+                originalAudioBuffer = buffer;
+                audioBuffer = originalAudioBuffer; // Initially, processed buffer is the original
+                console.log('Audio (from drop) decoded successfully.');
+                updateButtonStates(false, false, !!audioBuffer, !!audioBuffer);
+
+                if (html5AudioPlayer && selectedFile) {
+                    if (currentPlayerObjectUrl) {
+                        URL.revokeObjectURL(currentPlayerObjectUrl);
+                    }
+                    currentPlayerObjectUrl = URL.createObjectURL(selectedFile);
+                    html5AudioPlayer.src = currentPlayerObjectUrl;
+                }
+                // If a transformation is already selected, trigger processing
+                // This matches behavior of file input if a transformation was pre-selected
+                if (selectedTransformation && originalAudioBuffer) {
+                    triggerAudioProcessing();
+                }
+            }, (error) => {
+                console.error('Error decoding audio data (from drop):', error);
+                originalAudioBuffer = null;
+                audioBuffer = null;
+                selectedFile = null;
+                updateButtonStates(false, false, false, false);
+                if (statusMessageElement) statusMessageElement.textContent = getTranslation('audioDecodeError', error.message);
+            });
+        };
+        reader.onerror = (error) => {
+            console.error('FileReader error (from drop):', error);
+            originalAudioBuffer = null;
+            audioBuffer = null;
+            selectedFile = null;
+            updateButtonStates(false, false, false, false);
+            if (statusMessageElement) statusMessageElement.textContent = getTranslation('fileReadError', error.message);
+        };
+        reader.readAsArrayBuffer(selectedFile);
+    } else {
+        console.log("No file dropped or drop contained no files.");
+    }
+}
+// --- End Drag and Drop File Handling ---
 
 // Transformation Function (Stereo Widening using Haas Effect)
 function applyStereoWidening(inputBuffer) {
@@ -1310,12 +1421,17 @@ async function apply32DEffect(inputBuffer, userConfig = {}) {
 // Fetches the Reverb IR file and returns a promise that resolves with its ArrayBuffer.
 // Caches the promise to avoid multiple fetches for the same IR.
 async function getReverbIrArrayBuffer(irUrl = 'assets/irs/default_reverb.wav') {
-    if (irArrayBufferPromise) {
-        console.log("Reverb IR ArrayBuffer fetch already in progress or completed. Returning cached promise.");
+    // Ensure irArrayBufferPromise is defined in a scope accessible here or passed appropriately.
+    // For this example, assuming it's a global or module-scoped variable initialized to null.
+    if (irArrayBufferPromise && irUrl === getReverbIrArrayBuffer.lastIrUrl) { // Check if URL is same as cached
+        console.log("Reverb IR ArrayBuffer fetch already in progress or completed for this URL. Returning cached promise.");
         return irArrayBufferPromise;
     }
 
     console.log("Fetching Reverb IR ArrayBuffer from:", irUrl);
+    // Store the URL for which this promise is being created
+    getReverbIrArrayBuffer.lastIrUrl = irUrl;
+
     irArrayBufferPromise = new Promise(async (resolve, reject) => {
         try {
             const response = await fetch(irUrl);
@@ -1327,10 +1443,14 @@ async function getReverbIrArrayBuffer(irUrl = 'assets/irs/default_reverb.wav') {
             resolve(arrayBuffer);
         } catch (error) {
             console.error("Failed to fetch Reverb IR ArrayBuffer:", error);
-            irArrayBufferPromise = null; // Clear cache on error so it can be retried
+            if (getReverbIrArrayBuffer.lastIrUrl === irUrl) { // Only clear if it's for the failed URL
+                irArrayBufferPromise = null;
+                getReverbIrArrayBuffer.lastIrUrl = null;
+            }
             reject(error);
         }
     });
     return irArrayBufferPromise;
 }
+getReverbIrArrayBuffer.lastIrUrl = null; // Initialize static-like property for the function
 // --- End Reverb IR Loading Function ---

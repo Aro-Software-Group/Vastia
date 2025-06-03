@@ -1,7 +1,7 @@
 {
   "headerTitle": "FR: Vastia",
   "uploadHeading": "FR: 1. Upload Your Audio",
-  "uploadPrompt": "FR: Click the button below or drag files here (drag not functional yet)",
+  "uploadPrompt": "Cliquez sur le bouton ci-dessous ou glissez-déposez un fichier ici",
   "selectFileButton": "FR: Select Audio/Video File",
   "transformHeading": "FR: 2. Choose Transformation",
   "transform8d": "FR: 8D Audio",

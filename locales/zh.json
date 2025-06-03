@@ -1,7 +1,7 @@
 {
   "headerTitle": "ZH: Vastia",
   "uploadHeading": "ZH: 1. Upload Your Audio",
-  "uploadPrompt": "ZH: Click the button below or drag files here (drag not functional yet)",
+  "uploadPrompt": "点击下方按钮或拖放文件到此处",
   "selectFileButton": "ZH: Select Audio/Video File",
   "transformHeading": "ZH: 2. Choose Transformation",
   "transform8d": "ZH: 8D Audio",

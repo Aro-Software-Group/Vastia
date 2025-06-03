@@ -1,7 +1,7 @@
 {
   "headerTitle": "KO: Vastia",
   "uploadHeading": "KO: 1. Upload Your Audio",
-  "uploadPrompt": "KO: Click the button below or drag files here (drag not functional yet)",
+  "uploadPrompt": "아래 버튼을 클릭하거나 여기에 파일을 드래그 앤 드롭하세요",
   "selectFileButton": "KO: Select Audio/Video File",
   "transformHeading": "KO: 2. Choose Transformation",
   "transform8d": "KO: 8D Audio",
