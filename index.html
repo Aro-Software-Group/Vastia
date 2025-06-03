@@ -19,7 +19,7 @@
         </header>
 
         <main>
-            <section id="file-upload" class="mb-12 c-file-upload-area c-animated-section" style="animation-delay: 200ms;">
+            <section id="file-upload" class="c-file-upload-area c-animated-section" style="animation-delay: 200ms;">
                 <h2 class="text-2xl font-semibold text-[var(--win-text-primary)] mb-4 text-center" data-translate-key="uploadHeading">Start with Your Audio</h2>
                 <!-- Content will be centered by .c-file-upload-area flex properties -->
                 <p class="upload-prompt-text text-lg" data-translate-key="uploadPrompt">Upload your audio or video file to begin.</p>
@@ -30,7 +30,7 @@
                 <p id="fileName" class="text-sm"></p> <!-- Tailwind 'mt-3' removed, CSS handles positioning/appearance -->
             </section>
 
-            <section id="transformation-options" class="p-8 shadow-lg mb-12 c-card rounded-[var(--win-rounded-lg)] c-animated-section" style="animation-delay: 350ms;">
+            <section id="transformation-options" class="shadow-lg c-card rounded-[var(--win-rounded-lg)] c-animated-section" style="animation-delay: 350ms;">
                 <h2 class="text-2xl font-semibold text-[var(--win-text-primary)] mb-4 text-center" data-translate-key="transformHeading">Select Your Desired Effect</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                     <div>
@@ -68,7 +68,7 @@
                 <button id="toggleConfigButton" data-translate-key="showConfiguration" class="c-button bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-[var(--win-rounded-md)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500">Show Configuration</button>
             </div>
 
-            <section id="audio-preview" class="p-8 shadow-lg mb-12 c-card rounded-[var(--win-rounded-lg)] c-animated-section" style="animation-delay: 500ms;">
+            <section id="audio-preview" class="shadow-lg c-card rounded-[var(--win-rounded-lg)] c-animated-section" style="animation-delay: 500ms;">
                 <h2 class="text-2xl font-semibold text-[var(--win-text-primary)] mb-4 text-center" data-translate-key="previewHeading">Listen to the Magic</h2>
                 <div class="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-3 mt-4 mb-6">
                     <button id="playButton" disabled class="c-button w-full sm:w-auto bg-green-600 hover:bg-green-700 text-[var(--win-text-on-accent)] font-semibold py-2 px-6 rounded-[var(--win-rounded-md)] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--win-primary-accent)]" data-translate-key="playButton">Play</button>
@@ -81,7 +81,7 @@
                 </div>
             </section>
 
-            <section id="download" class="p-8 shadow-lg c-card rounded-[var(--win-rounded-lg)] c-animated-section" style="animation-delay: 650ms;">
+            <section id="download" class="shadow-lg c-card rounded-[var(--win-rounded-lg)] c-animated-section" style="animation-delay: 650ms;">
                 <h2 class="text-2xl font-semibold text-[var(--win-text-primary)] mb-4 text-center" data-translate-key="downloadHeading">Get Your Enhanced Audio</h2>
                 <div class="text-center">
                     <button id="downloadButton" disabled class="c-button bg-[var(--win-primary-accent)] hover:bg-[var(--win-primary-accent-hover)] text-[var(--win-text-on-accent)] font-bold py-3 px-8 rounded-[var(--win-rounded-md)] disabled:opacity-50 text-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--win-primary-accent)]" data-translate-key="downloadButtonLabel">

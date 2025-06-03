@@ -65,6 +65,8 @@ body {
     background-color: var(--win-background-light);
     color: var(--win-text-primary);
     font-family: 'Nunito', sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -72,6 +74,11 @@ body {
 
 *, *::before, *::after {
     box-sizing: inherit;
+}
+
+main > section {
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-lg);
 }
 
 /* ==========================================================================
