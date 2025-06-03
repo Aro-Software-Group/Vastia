@@ -392,7 +392,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const stopAudio = () => {
         if (currentSource) {
+            // Stop and fully release the existing AudioBufferSourceNode to
+            // avoid calling stop() on an already-stopped node the next time
+            // playback starts.
             currentSource.stop(0);
+            currentSource.disconnect();
+            currentSource = null;
             console.log('Audio stopped.');
         }
         if (audioContext.state === 'suspended') {
