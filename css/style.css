@@ -1,16 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400&display=swap');
 
 /* ==========================================================================
    1. DESIGN TOKENS (VARIABLES)
    ========================================================================== */
 :root {
     /* Existing Color Palette */
-    --win-primary-accent: #0078D4;
-    --win-primary-accent-hover: #005A9E; /* Darker shade for hover */
-    --win-background-light: #F3F3F3;
+    --win-primary-accent: #FF6B6B; /* New primary accent */
+    --win-primary-accent-hover: #E05A5A; /* Darker shade for hover (new) */
+    --win-background-light: #FAF8F5; /* New background light */
     --win-surface-light: #FFFFFF; /* For elements like cards, was E9E9E9, but white is common for surfaces */
     --win-surface-light-transparent: rgba(255, 255, 255, 0.8); /* For acrylic effect */
-    --win-surface-light-border: #E0E0E0; /* Border for light surfaces */
+    --win-surface-light-border: #DCD7D0; /* Border for light surfaces (warmer gray) */
     --win-text-primary: #1A1A1A; /* Near black for primary text */
     --win-text-secondary: #505050; /* Softer gray for secondary text */
     --win-text-tertiary: #767676; /* Even softer for less important text */
@@ -18,8 +19,9 @@
 
     /* Standard rounded corner values */
     --win-rounded-sm: 4px;
-    --win-rounded-md: 6px;
-    --win-rounded-lg: 8px;
+    --win-rounded-md: 10px; /* Updated for more rounded buttons */
+    --win-rounded-lg: 12px; /* Updated for radio labels and general use */
+    --win-rounded-xl: 16px; /* Added for cards and larger elements */
 
     /* Spacing Tokens */
     --spacing-unit: 4px;
@@ -44,8 +46,8 @@
     --color-warning-bg: rgba(255, 185, 0, 0.1);
     --color-error: #D83B01;   /* Windows Red */
     --color-error-bg: rgba(216, 59, 1, 0.1);
-    --color-info: var(--win-primary-accent); /* Use accent blue for info */
-    --color-info-bg: rgba(0, 120, 212, 0.1);
+    --color-info: #007ACC; /* New info blue, distinct from new red accent */
+    --color-info-bg: rgba(0, 122, 204, 0.1); /* Adjusted for new info blue */
 
     /* More Surface/Text Shades */
     --win-surface-light-hover: rgba(0, 0, 0, 0.05); /* For subtle hover on light surfaces */
@@ -62,7 +64,7 @@
 body {
     background-color: var(--win-background-light);
     color: var(--win-text-primary);
-    font-family: 'Noto Sans JP', sans-serif;
+    font-family: 'Nunito', sans-serif;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -87,6 +89,10 @@ body {
     border-width: 0;
 }
 
+.font-accent {
+    font-family: 'Caveat', cursive;
+}
+
 /* ==========================================================================
    4. COMPONENT STYLES & INDICATORS
    ========================================================================== */
@@ -94,12 +100,14 @@ body {
     background-color: var(--win-surface-light-transparent);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: var(--border-standard);
-    border-radius: var(--win-rounded-lg);
+    border: none; /* Removed border, rely on shadow */
+    border-radius: var(--win-rounded-xl); /* Increased border radius */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1); /* Added noticeable shadow */
 }
 
 .c-button {
-    border-radius: var(--win-rounded-md);
+    border-radius: var(--win-rounded-md); /* Uses updated --win-rounded-md (10px) */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* Added subtle default shadow */
     transition: background-color var(--anim-duration-fast) var(--anim-ease-out),
                 border-color var(--anim-duration-fast) var(--anim-ease-out),
                 color var(--anim-duration-fast) var(--anim-ease-out),
@@ -136,7 +144,8 @@ body {
 }
 
 .c-radio-label {
-    border-radius: var(--win-rounded-md);
+    border-radius: var(--win-rounded-lg); /* Increased border radius to 12px */
+    border: none; /* Remove default border, rely on peer-checked states for accent border/ring */
     transition: background-color var(--anim-duration-fast) var(--anim-ease-out),
                 border-color var(--anim-duration-fast) var(--anim-ease-out),
                 box-shadow var(--anim-duration-fast) var(--anim-ease-out),
@@ -155,12 +164,12 @@ body {
 
 .c-radio-label.peer-checked {
     transform: scale(1.03);
-    box-shadow: 0 4px 12px rgba(0, 120, 212, 0.2), 0 0 0 2px var(--win-primary-accent);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1), 0 0 0 2px var(--win-primary-accent); /* Updated shadow */
 }
 
 .c-radio-label.peer-checked:hover {
     transform: translateY(-1px) scale(1.03);
-    box-shadow: 0 6px 14px rgba(0, 120, 212, 0.25), 0 0 0 2px var(--win-primary-accent);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12), 0 0 0 2px var(--win-primary-accent); /* Updated shadow */
 }
 
 .c-radio-label.peer-checked::after {
@@ -185,8 +194,8 @@ body {
 
 .c-file-upload-area {
     background-color: var(--win-surface-light);
-    border: 2px dashed var(--win-surface-light-border);
-    border-radius: var(--win-rounded-lg);
+    border: 2px dashed var(--win-surface-light-border); /* Kept dashed border */
+    border-radius: var(--win-rounded-xl); /* Increased border radius */
     padding: var(--spacing-xl);
     text-align: center;
     transition: background-color var(--anim-duration-fast) var(--anim-ease-out), border-color var(--anim-duration-fast) var(--anim-ease-out);
