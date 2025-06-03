@@ -6,9 +6,9 @@
    ========================================================================== */
 :root {
     /* Existing Color Palette */
-    --win-primary-accent: #FF6B6B; /* New primary accent */
-    --win-primary-accent-hover: #E05A5A; /* Darker shade for hover (new) */
-    --win-background-light: #FAF8F5; /* New background light */
+    --win-primary-accent: #4F46E5; /* New primary accent */
+    --win-primary-accent-hover: #4338CA; /* Darker shade for hover */
+    --win-background-light: #F0F4FF; /* Updated background light */
     --win-surface-light: #FFFFFF; /* For elements like cards, was E9E9E9, but white is common for surfaces */
     --win-surface-light-transparent: rgba(255, 255, 255, 0.8); /* For acrylic effect */
     --win-surface-light-border: #DCD7D0; /* Border for light surfaces (warmer gray) */
