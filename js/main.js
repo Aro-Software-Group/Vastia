@@ -28,7 +28,17 @@ let selectedTransformation = '8d'; // Default transformation
 let currentAudioConfig = {
     '8d': { panSpeed: 0.15, lfoPanDepth1: 0.7, lfoPanDepth2: 0.3, filterFreq: 1000, lfoFilterSpeed: 0.15, reverbMix: 0.25, delayMix: 0.25 },
     '16d': { pannerXOscRate: 0.05, pannerXOscWidth: 5, reverbMix: 0.4, pannerZPos: -5 },
-    '32d': { panXRate: 0.1, panXWidth: 3, panYRate: 0.07, panYWidth: 2, panZRate: 0.05, panZWidth: 4, reverbMix: 0.5 }
+    '32d': { panXRate: 0.1, panXWidth: 3, panYRate: 0.07, panYWidth: 2, panZRate: 0.05, panZWidth: 4, reverbMix: 0.5 },
+    '64d': { panXRate: 0.15, panXWidth: 6, panYRate: 0.1, panYWidth: 4, panZRate: 0.08, panZWidth: 6, reverbMix: 0.6 },
+    'stereo': {},
+    'reverse': {},
+    'bassboost': { gain: 6 },
+    'echo': { delayTime: 0.3, feedback: 0.4 },
+    'pitchup': { factor: 1.25 },
+    'pitchdown': { factor: 0.8 },
+    'speedup': { factor: 1.25 },
+    'slowdown': { factor: 0.8 },
+    'reverb': { mix: 0.5 }
 };
 // UI elements for the configuration panel
 let toggleConfigButton, configPanel, configOptionsContainer, applyConfigButton;
@@ -895,6 +905,36 @@ function triggerAudioProcessing() {
     } else if (selectedTransformation === '32d') {
         effectPromise = apply32DEffect(originalAudioBuffer, effectConfig);
         effectDisplayName = getTranslation('effectName32D', "32D Effect");
+    } else if (selectedTransformation === '64d') {
+        effectPromise = apply64DEffect(originalAudioBuffer, effectConfig);
+        effectDisplayName = getTranslation('effectName64D', "64D Effect");
+    } else if (selectedTransformation === 'stereo') {
+        effectPromise = applyStereoWidening(originalAudioBuffer);
+        effectDisplayName = getTranslation('effectNameStereo', "Stereo Widen");
+    } else if (selectedTransformation === 'reverse') {
+        effectPromise = applyReverseEffect(originalAudioBuffer);
+        effectDisplayName = getTranslation('effectNameReverse', "Reverse");
+    } else if (selectedTransformation === 'bassboost') {
+        effectPromise = applyBassBoostEffect(originalAudioBuffer, effectConfig);
+        effectDisplayName = getTranslation('effectNameBassBoost', "Bass Boost");
+    } else if (selectedTransformation === 'echo') {
+        effectPromise = applyEchoEffect(originalAudioBuffer, effectConfig);
+        effectDisplayName = getTranslation('effectNameEcho', "Echo");
+    } else if (selectedTransformation === 'pitchup') {
+        effectPromise = applyPitchShiftEffect(originalAudioBuffer, effectConfig.factor || 1.25);
+        effectDisplayName = getTranslation('effectNamePitchUp', "Pitch Up");
+    } else if (selectedTransformation === 'pitchdown') {
+        effectPromise = applyPitchShiftEffect(originalAudioBuffer, effectConfig.factor || 0.8);
+        effectDisplayName = getTranslation('effectNamePitchDown', "Pitch Down");
+    } else if (selectedTransformation === 'speedup') {
+        effectPromise = applySpeedChangeEffect(originalAudioBuffer, effectConfig.factor || 1.25);
+        effectDisplayName = getTranslation('effectNameSpeedUp', "Speed Up");
+    } else if (selectedTransformation === 'slowdown') {
+        effectPromise = applySpeedChangeEffect(originalAudioBuffer, effectConfig.factor || 0.8);
+        effectDisplayName = getTranslation('effectNameSlowDown', "Slow Down");
+    } else if (selectedTransformation === 'reverb') {
+        effectPromise = applyReverbOnlyEffect(originalAudioBuffer, effectConfig);
+        effectDisplayName = getTranslation('effectNameReverb', "Reverb Only");
     } else {
         console.log(`No specific effect defined for '${selectedTransformation}'. Reverting to original.`);
         audioBuffer = originalAudioBuffer;
@@ -1421,6 +1461,225 @@ async function apply32DEffect(inputBuffer, userConfig = {}) {
     });
 }
 // --- End 32D Effect Function ---
+
+// --- 64D Effect Function ---
+async function apply64DEffect(inputBuffer, userConfig = {}) {
+    const defaultConfig = currentAudioConfig['64d'];
+    const config = { ...defaultConfig, ...userConfig };
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!window.OfflineAudioContext) {
+                reject(new Error("OfflineAudioContext is not supported by this browser."));
+                return;
+            }
+            const offlineCtx = new OfflineAudioContext(2, inputBuffer.length, inputBuffer.sampleRate);
+
+            let decodedReverbIrBuffer = null;
+            try {
+                const irArrayBuffer = await getReverbIrArrayBuffer('assets/irs/default_reverb.wav');
+                if (irArrayBuffer) {
+                    decodedReverbIrBuffer = await new Promise((res, rej) => {
+                        offlineCtx.decodeAudioData(irArrayBuffer.slice(0), b => res(b), err => rej(err));
+                    });
+                }
+            } catch (error) {
+                console.warn('Reverb IR processing failed for 64D effect:', error.message);
+            }
+
+            const audioSource = offlineCtx.createBufferSource();
+            audioSource.buffer = inputBuffer;
+
+            const panner = offlineCtx.createPanner();
+            panner.panningModel = 'HRTF';
+            panner.distanceModel = 'inverse';
+
+            const lfoX = offlineCtx.createOscillator();
+            lfoX.type = 'sine';
+            lfoX.frequency.value = config.panXRate;
+            const lfoXDepth = offlineCtx.createGain();
+            lfoXDepth.gain.value = config.panXWidth;
+            lfoX.connect(lfoXDepth);
+            lfoXDepth.connect(panner.positionX);
+
+            const lfoY = offlineCtx.createOscillator();
+            lfoY.type = 'triangle';
+            lfoY.frequency.value = config.panYRate;
+            const lfoYDepth = offlineCtx.createGain();
+            lfoYDepth.gain.value = config.panYWidth;
+            lfoY.connect(lfoYDepth);
+            lfoYDepth.connect(panner.positionY);
+
+            const lfoZ = offlineCtx.createOscillator();
+            lfoZ.type = 'sawtooth';
+            lfoZ.frequency.value = config.panZRate;
+            const lfoZDepth = offlineCtx.createGain();
+            lfoZDepth.gain.value = config.panZWidth;
+            lfoZ.connect(lfoZDepth);
+            lfoZDepth.connect(panner.positionZ);
+
+            audioSource.connect(panner);
+
+            const directGain = offlineCtx.createGain();
+            panner.connect(directGain);
+            directGain.connect(offlineCtx.destination);
+
+            let reverbWetGain;
+            if (decodedReverbIrBuffer) {
+                const convolver = offlineCtx.createConvolver();
+                convolver.buffer = decodedReverbIrBuffer;
+                convolver.normalize = true;
+                reverbWetGain = offlineCtx.createGain();
+                panner.connect(convolver);
+                convolver.connect(reverbWetGain);
+                reverbWetGain.connect(offlineCtx.destination);
+                reverbWetGain.gain.value = config.reverbMix;
+                directGain.gain.value = 1 - config.reverbMix;
+            } else {
+                directGain.gain.value = 1.0;
+            }
+
+            lfoX.start(0); lfoY.start(0); lfoZ.start(0); audioSource.start(0);
+            offlineCtx.startRendering().then(resolve).catch(err => reject(new Error('64D effect rendering failed: ' + err.message)));
+        } catch (error) {
+            reject(new Error('Error in apply64DEffect: ' + error.message));
+        }
+    });
+}
+// --- End 64D Effect Function ---
+
+// --- Simple Effect Utilities ---
+function applyReverseEffect(inputBuffer) {
+    return new Promise((resolve, reject) => {
+        try {
+            const numberOfChannels = inputBuffer.numberOfChannels;
+            const length = inputBuffer.length;
+            const sampleRate = inputBuffer.sampleRate;
+            const output = new AudioBuffer({ length, numberOfChannels, sampleRate });
+            for (let ch = 0; ch < numberOfChannels; ch++) {
+                const data = inputBuffer.getChannelData(ch);
+                const reversed = new Float32Array(length);
+                for (let i = 0; i < length; i++) {
+                    reversed[i] = data[length - 1 - i];
+                }
+                output.copyToChannel(reversed, ch);
+            }
+            resolve(output);
+        } catch (e) {
+            reject(new Error('Error in applyReverseEffect: ' + e.message));
+        }
+    });
+}
+
+function applyBassBoostEffect(inputBuffer, userConfig = {}) {
+    const config = { ...currentAudioConfig['bassboost'], ...userConfig };
+    return new Promise((resolve, reject) => {
+        try {
+            const offlineCtx = new OfflineAudioContext(inputBuffer.numberOfChannels, inputBuffer.length, inputBuffer.sampleRate);
+            const source = offlineCtx.createBufferSource();
+            source.buffer = inputBuffer;
+            const filter = offlineCtx.createBiquadFilter();
+            filter.type = 'lowshelf';
+            filter.frequency.value = 200;
+            filter.gain.value = config.gain;
+            source.connect(filter);
+            filter.connect(offlineCtx.destination);
+            source.start(0);
+            offlineCtx.startRendering().then(resolve).catch(err => reject(new Error('Bass boost rendering failed: ' + err.message)));
+        } catch (e) {
+            reject(new Error('Error in applyBassBoostEffect: ' + e.message));
+        }
+    });
+}
+
+function applyEchoEffect(inputBuffer, userConfig = {}) {
+    const config = { ...currentAudioConfig['echo'], ...userConfig };
+    return new Promise((resolve, reject) => {
+        try {
+            const offlineCtx = new OfflineAudioContext(inputBuffer.numberOfChannels, inputBuffer.length + inputBuffer.sampleRate * config.delayTime, inputBuffer.sampleRate);
+            const source = offlineCtx.createBufferSource();
+            source.buffer = inputBuffer;
+            const delayNode = offlineCtx.createDelay();
+            delayNode.delayTime.value = config.delayTime;
+            const feedback = offlineCtx.createGain();
+            feedback.gain.value = config.feedback;
+            delayNode.connect(feedback);
+            feedback.connect(delayNode);
+            const merger = offlineCtx.createGain();
+            source.connect(delayNode);
+            source.connect(merger);
+            delayNode.connect(merger);
+            merger.connect(offlineCtx.destination);
+            source.start(0);
+            offlineCtx.startRendering().then(resolve).catch(err => reject(new Error('Echo rendering failed: ' + err.message)));
+        } catch (e) {
+            reject(new Error('Error in applyEchoEffect: ' + e.message));
+        }
+    });
+}
+
+function applyPitchShiftEffect(inputBuffer, factor) {
+    return new Promise((resolve, reject) => {
+        try {
+            const newLength = Math.ceil(inputBuffer.length / factor);
+            const offlineCtx = new OfflineAudioContext(inputBuffer.numberOfChannels, newLength, inputBuffer.sampleRate);
+            const source = offlineCtx.createBufferSource();
+            source.buffer = inputBuffer;
+            source.playbackRate.value = factor;
+            source.connect(offlineCtx.destination);
+            source.start(0);
+            offlineCtx.startRendering().then(resolve).catch(err => reject(new Error('Pitch shift failed: ' + err.message)));
+        } catch (e) {
+            reject(new Error('Error in applyPitchShiftEffect: ' + e.message));
+        }
+    });
+}
+
+function applySpeedChangeEffect(inputBuffer, factor) {
+    return applyPitchShiftEffect(inputBuffer, factor);
+}
+
+async function applyReverbOnlyEffect(inputBuffer, userConfig = {}) {
+    const config = { ...currentAudioConfig['reverb'], ...userConfig };
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!window.OfflineAudioContext) {
+                reject(new Error('OfflineAudioContext is not supported by this browser.'));
+                return;
+            }
+            const offlineCtx = new OfflineAudioContext(2, inputBuffer.length, inputBuffer.sampleRate);
+            let decodedReverbIrBuffer = null;
+            try {
+                const irArrayBuffer = await getReverbIrArrayBuffer('assets/irs/default_reverb.wav');
+                if (irArrayBuffer) {
+                    decodedReverbIrBuffer = await new Promise((res, rej) => {
+                        offlineCtx.decodeAudioData(irArrayBuffer.slice(0), b => res(b), err => rej(err));
+                    });
+                }
+            } catch (error) {
+                console.warn('Reverb IR processing failed for reverb effect:', error.message);
+            }
+
+            const source = offlineCtx.createBufferSource();
+            source.buffer = inputBuffer;
+            const dry = offlineCtx.createGain();
+            const wet = offlineCtx.createGain();
+            dry.gain.value = 1 - config.mix;
+            wet.gain.value = config.mix;
+            const convolver = offlineCtx.createConvolver();
+            convolver.buffer = decodedReverbIrBuffer;
+            source.connect(dry);
+            dry.connect(offlineCtx.destination);
+            source.connect(convolver);
+            convolver.connect(wet);
+            wet.connect(offlineCtx.destination);
+            source.start(0);
+            offlineCtx.startRendering().then(resolve).catch(err => reject(new Error('Reverb rendering failed: ' + err.message)));
+        } catch (e) {
+            reject(new Error('Error in applyReverbOnlyEffect: ' + e.message));
+        }
+    });
+}
+// --- End Simple Effect Utilities ---
 
 // --- Reverb IR Loading Function ---
 // Fetches the Reverb IR file and returns a promise that resolves with its ArrayBuffer.

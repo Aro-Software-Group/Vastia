@@ -35,7 +35,7 @@
 
             <section id="transformation-options" class="shadow-lg c-card rounded-[var(--win-rounded-lg)] c-animated-section" style="animation-delay: 350ms;">
                 <h2 class="text-2xl font-semibold text-[var(--win-text-primary)] mb-4 text-center" data-translate-key="transformHeading">Select Your Desired Effect</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4 text-center">
                     <div>
                         <input type="radio" id="transform8d" name="transformation" value="8d" checked class="sr-only peer">
                         <label for="transform8d" class="c-radio-label block cursor-pointer p-4 rounded-[var(--win-rounded-md)] border border-[var(--win-surface-light-border)] peer-checked:border-[var(--win-primary-accent)] peer-checked:ring-2 peer-checked:ring-[var(--win-primary-accent)] peer-checked:bg-[var(--win-primary-accent)]/10 hover:bg-black/5">
@@ -52,6 +52,66 @@
                         <input type="radio" id="transform32d" name="transformation" value="32d" class="sr-only peer">
                         <label for="transform32d" class="c-radio-label block cursor-pointer p-4 rounded-[var(--win-rounded-md)] border border-[var(--win-surface-light-border)] peer-checked:border-[var(--win-primary-accent)] peer-checked:ring-2 peer-checked:ring-[var(--win-primary-accent)] peer-checked:bg-[var(--win-primary-accent)]/10 hover:bg-black/5">
                             <span class="text-lg font-medium text-[var(--win-text-primary)]" data-translate-key="transform32d">32D Audio</span>
+                        </label>
+                    </div>
+                    <div>
+                        <input type="radio" id="transform64d" name="transformation" value="64d" class="sr-only peer">
+                        <label for="transform64d" class="c-radio-label block cursor-pointer p-4 rounded-[var(--win-rounded-md)] border border-[var(--win-surface-light-border)] peer-checked:border-[var(--win-primary-accent)] peer-checked:ring-2 peer-checked:ring-[var(--win-primary-accent)] peer-checked:bg-[var(--win-primary-accent)]/10 hover:bg-black/5">
+                            <span class="text-lg font-medium text-[var(--win-text-primary)]" data-translate-key="transform64d">64D Audio</span>
+                        </label>
+                    </div>
+                    <div>
+                        <input type="radio" id="transformStereo" name="transformation" value="stereo" class="sr-only peer">
+                        <label for="transformStereo" class="c-radio-label block cursor-pointer p-4 rounded-[var(--win-rounded-md)] border border-[var(--win-surface-light-border)] peer-checked:border-[var(--win-primary-accent)] peer-checked:ring-2 peer-checked:ring-[var(--win-primary-accent)] peer-checked:bg-[var(--win-primary-accent)]/10 hover:bg-black/5">
+                            <span class="text-lg font-medium text-[var(--win-text-primary)]" data-translate-key="transformStereo">Stereo Widen</span>
+                        </label>
+                    </div>
+                    <div>
+                        <input type="radio" id="transformReverse" name="transformation" value="reverse" class="sr-only peer">
+                        <label for="transformReverse" class="c-radio-label block cursor-pointer p-4 rounded-[var(--win-rounded-md)] border border-[var(--win-surface-light-border)] peer-checked:border-[var(--win-primary-accent)] peer-checked:ring-2 peer-checked:ring-[var(--win-primary-accent)] peer-checked:bg-[var(--win-primary-accent)]/10 hover:bg-black/5">
+                            <span class="text-lg font-medium text-[var(--win-text-primary)]" data-translate-key="transformReverse">Reverse</span>
+                        </label>
+                    </div>
+                    <div>
+                        <input type="radio" id="transformBass" name="transformation" value="bassboost" class="sr-only peer">
+                        <label for="transformBass" class="c-radio-label block cursor-pointer p-4 rounded-[var(--win-rounded-md)] border border-[var(--win-surface-light-border)] peer-checked:border-[var(--win-primary-accent)] peer-checked:ring-2 peer-checked:ring-[var(--win-primary-accent)] peer-checked:bg-[var(--win-primary-accent)]/10 hover:bg-black/5">
+                            <span class="text-lg font-medium text-[var(--win-text-primary)]" data-translate-key="transformBassBoost">Bass Boost</span>
+                        </label>
+                    </div>
+                    <div>
+                        <input type="radio" id="transformEcho" name="transformation" value="echo" class="sr-only peer">
+                        <label for="transformEcho" class="c-radio-label block cursor-pointer p-4 rounded-[var(--win-rounded-md)] border border-[var(--win-surface-light-border)] peer-checked:border-[var(--win-primary-accent)] peer-checked:ring-2 peer-checked:ring-[var(--win-primary-accent)] peer-checked:bg-[var(--win-primary-accent)]/10 hover:bg-black/5">
+                            <span class="text-lg font-medium text-[var(--win-text-primary)]" data-translate-key="transformEcho">Echo</span>
+                        </label>
+                    </div>
+                    <div>
+                        <input type="radio" id="transformPitchUp" name="transformation" value="pitchup" class="sr-only peer">
+                        <label for="transformPitchUp" class="c-radio-label block cursor-pointer p-4 rounded-[var(--win-rounded-md)] border border-[var(--win-surface-light-border)] peer-checked:border-[var(--win-primary-accent)] peer-checked:ring-2 peer-checked:ring-[var(--win-primary-accent)] peer-checked:bg-[var(--win-primary-accent)]/10 hover:bg-black/5">
+                            <span class="text-lg font-medium text-[var(--win-text-primary)]" data-translate-key="transformPitchUp">Pitch Up</span>
+                        </label>
+                    </div>
+                    <div>
+                        <input type="radio" id="transformPitchDown" name="transformation" value="pitchdown" class="sr-only peer">
+                        <label for="transformPitchDown" class="c-radio-label block cursor-pointer p-4 rounded-[var(--win-rounded-md)] border border-[var(--win-surface-light-border)] peer-checked:border-[var(--win-primary-accent)] peer-checked:ring-2 peer-checked:ring-[var(--win-primary-accent)] peer-checked:bg-[var(--win-primary-accent)]/10 hover:bg-black/5">
+                            <span class="text-lg font-medium text-[var(--win-text-primary)]" data-translate-key="transformPitchDown">Pitch Down</span>
+                        </label>
+                    </div>
+                    <div>
+                        <input type="radio" id="transformSpeedUp" name="transformation" value="speedup" class="sr-only peer">
+                        <label for="transformSpeedUp" class="c-radio-label block cursor-pointer p-4 rounded-[var(--win-rounded-md)] border border-[var(--win-surface-light-border)] peer-checked:border-[var(--win-primary-accent)] peer-checked:ring-2 peer-checked:ring-[var(--win-primary-accent)] peer-checked:bg-[var(--win-primary-accent)]/10 hover:bg-black/5">
+                            <span class="text-lg font-medium text-[var(--win-text-primary)]" data-translate-key="transformSpeedUp">Speed Up</span>
+                        </label>
+                    </div>
+                    <div>
+                        <input type="radio" id="transformSlowDown" name="transformation" value="slowdown" class="sr-only peer">
+                        <label for="transformSlowDown" class="c-radio-label block cursor-pointer p-4 rounded-[var(--win-rounded-md)] border border-[var(--win-surface-light-border)] peer-checked:border-[var(--win-primary-accent)] peer-checked:ring-2 peer-checked:ring-[var(--win-primary-accent)] peer-checked:bg-[var(--win-primary-accent)]/10 hover:bg-black/5">
+                            <span class="text-lg font-medium text-[var(--win-text-primary)]" data-translate-key="transformSlowDown">Slow Down</span>
+                        </label>
+                    </div>
+                    <div>
+                        <input type="radio" id="transformReverb" name="transformation" value="reverb" class="sr-only peer">
+                        <label for="transformReverb" class="c-radio-label block cursor-pointer p-4 rounded-[var(--win-rounded-md)] border border-[var(--win-surface-light-border)] peer-checked:border-[var(--win-primary-accent)] peer-checked:ring-2 peer-checked:ring-[var(--win-primary-accent)] peer-checked:bg-[var(--win-primary-accent)]/10 hover:bg-black/5">
+                            <span class="text-lg font-medium text-[var(--win-text-primary)]" data-translate-key="transformReverb">Reverb Only</span>
                         </label>
                     </div>
                 </div>
