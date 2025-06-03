@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-translate-key="pricingTitle">Vastia - 料金体系</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="font-['Noto_Sans_JP',_sans-serif]">
+    <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 u-anim-fadeIn">
+        <header class="mb-10">
+            <!-- Placeholder for Header/Branding area -->
+            <h1 class="text-4xl sm:text-5xl font-bold text-center text-[var(--win-primary-accent)] py-4" data-translate-key="headerTitle">Vastia</h1>
+            <nav class="text-center mb-4">
+                <a href="index.html" class="text-blue-500 hover:text-blue-700 mx-2" data-translate-key="navHome">メインページ</a>
+                <a href="how-to-use.html" class="text-blue-500 hover:text-blue-700 mx-2" data-translate-key="navHowToUse">Vastiaの使い方</a>
+            </nav>
+        </header>
+
+        <main>
+            <section id="pricing-plans" class="mb-8">
+                <h2 class="text-3xl font-semibold text-[var(--win-text-primary)] mb-6 text-center" data-translate-key="pricingHeading">料金体系</h2>
+                <p class="text-lg text-[var(--win-text-secondary)] mb-8 text-center" data-translate-key="pricingIntro">Vastiaの各プランの詳細はこちらです。あなたにぴったりのプランをお選びください。</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+                    <!-- Free Plan -->
+                    <div class="p-6 shadow-lg c-card rounded-[var(--win-rounded-lg)] mb-6">
+                        <h3 class="text-2xl font-semibold text-[var(--win-primary-accent)] mb-3" data-translate-key="freePlanName">Free プラン</h3>
+                        <p class="text-xl font-bold text-[var(--win-text-primary)] mb-4" data-translate-key="freePlanPrice">0円/月</p>
+                        <ul class="list-disc list-inside text-[var(--win-text-secondary)] space-y-2">
+                            <li data-translate-key="freePlanFeature1">8D, 16D, 32D立体音響への一か月100回のアクセス</li>
+                            <li data-translate-key="freePlanFeature2">限定的な新機能の利用</li>
+                            <li data-translate-key="freePlanFeature3">基本的な機能の全コードにアクセス</li>
+                        </ul>
+                    </div>
+
+                    <!-- Plus Plan -->
+                    <div class="p-6 shadow-lg c-card rounded-[var(--win-rounded-lg)] mb-6">
+                        <h3 class="text-2xl font-semibold text-[var(--win-primary-accent)] mb-3" data-translate-key="plusPlanName">Plus プラン</h3>
+                        <p class="text-xl font-bold text-[var(--win-text-primary)] mb-4" data-translate-key="plusPlanPrice">200円/月</p>
+                        <ul class="list-disc list-inside text-[var(--win-text-secondary)] space-y-2">
+                            <li data-translate-key="plusPlanFeature1">8D, 16D, 32D立体音響への無制限アクセス</li>
+                            <li data-translate-key="plusPlanFeature2">近日登場予定の、音楽の世界にのめりこんだかのような音声を作成することができる新モード、「Vastia Pro Mode」への一か月10回の制限付きアクセス</li>
+                        </ul>
+                    </div>
+
+                    <!-- Pro Plan -->
+                    <div class="p-6 shadow-lg c-card rounded-[var(--win-rounded-lg)] mb-6">
+                        <h3 class="text-2xl font-semibold text-[var(--win-primary-accent)] mb-3" data-translate-key="proPlanName">Pro プラン</h3>
+                        <p class="text-xl font-bold text-[var(--win-text-primary)] mb-4" data-translate-key="proPlanPrice">1000円/月</p>
+                        <ul class="list-disc list-inside text-[var(--win-text-secondary)] space-y-2">
+                            <li data-translate-key="proPlanFeature1">Plus機能のすべて</li>
+                            <li data-translate-key="proPlanFeature2">「Vastia Pro Mode」への無制限アクセス</li>
+                            <li data-translate-key="proPlanFeature3">Pro Modeよりもすごい没入体験、重低音、カスタム可能なProモードの後に登場予定の機能、「Vastia Max Mode」への一か月3回の制限付きアクセス</li>
+                        </ul>
+                    </div>
+
+                    <!-- Max Plan -->
+                    <div class="p-6 shadow-lg c-card rounded-[var(--win-rounded-lg)] mb-6">
+                        <h3 class="text-2xl font-semibold text-[var(--win-primary-accent)] mb-3" data-translate-key="maxPlanName">Max プラン</h3>
+                        <p class="text-xl font-bold text-[var(--win-text-primary)] mb-4" data-translate-key="maxPlanPrice">2000円/月</p>
+                        <ul class="list-disc list-inside text-[var(--win-text-secondary)] space-y-2">
+                            <li data-translate-key="maxPlanFeature1">Proのすべて</li>
+                            <li data-translate-key="maxPlanFeature2">Vastia Max Modeへの無制限アクセス</li>
+                            <li data-translate-key="maxPlanFeature3">研究プレビューの機能へアクセス</li>
+                            <li data-translate-key="maxPlanFeature4">完全な全コードをダウンロードし、二次創作可能な特典</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="mt-12 text-center">
+            <div id="language-switcher" class="mb-4">
+                <a href="#" data-lang="ja">日本語</a> |
+                <a href="#" data-lang="en">English</a> |
+                <a href="#" data-lang="ko">한국어</a> |
+                <a href="#" data-lang="zh">中文</a> |
+                <a href="#" data-lang="hi">हिन्दी</a> |
+                <a href="#" data-lang="es">Español</a> |
+                <a href="#" data-lang="fr">Français</a>
+            </div>
+            <p class="text-[var(--win-text-tertiary)] text-sm" data-translate-key="footerCopyright">&copy; 2023 Vastia. All rights reserved.</p>
+        </footer>
+    </div>
+    <script src="js/main.js"></script>
+</body>
+</html>
