@@ -198,7 +198,8 @@ body {
 }
 
 .c-file-upload-area:hover,
-.c-file-upload-area.is-dragover {
+.c-file-upload-area.is-dragover, /* Deprecated: to be removed if is-dragover is no longer used */
+.c-file-upload-area--dragover { /* New class for explicit drag over state */
     border-color: var(--win-primary-accent);
     background-color: var(--color-info-bg);
 }
