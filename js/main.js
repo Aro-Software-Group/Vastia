@@ -40,7 +40,7 @@ let currentAudioConfig = {
     'speedup': { factor: 1.25 },
     'slowdown': { factor: 0.8 },
     'reverb': { mix: 0.5 }
-    ,'hq': { oversample: 2 }
+    ,'hq': { oversample: 0 }
 };
 // UI elements for the configuration panel
 let toggleConfigButton, configPanel, configOptionsContainer, applyConfigButton;
@@ -834,7 +834,7 @@ function populateConfigOptions(effectType) {
         `;
     } else if (effectType === 'hq') {
         optionsHtml += `
-            <div class="space-y-1"><label for="hqOversample" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('hqOversample', 'Oversample:')}</label><input type="range" id="hqOversample" min="1" max="4" step="1" value="${config.oversample}" class="config-slider"><span id="hqOversampleValue" class="text-xs text-[var(--win-text-tertiary)]">${config.oversample}</span></div>
+            <div class="space-y-1"><label for="hqOversample" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('hqOversample', 'Oversample (0=Auto):')}</label><input type="range" id="hqOversample" min="0" max="4" step="1" value="${config.oversample}" class="config-slider"><span id="hqOversampleValue" class="text-xs text-[var(--win-text-tertiary)]">${config.oversample === 0 ? getTranslation('autoLabel', 'Auto') : config.oversample}</span></div>
         `;
     }
     configOptionsContainer.innerHTML = optionsHtml;
@@ -896,11 +896,18 @@ function populateConfigOptions(effectType) {
             return; // Skip if no specific mapping was found.
         }
 
+        const updateDisplay = (val) => {
+            const unit = (slider.id.toLowerCase().includes('rate') || slider.id.toLowerCase().includes('speed') || slider.id.toLowerCase().includes('freq')) ? ' Hz' : '';
+            if (slider.id === 'hqOversample' && val === 0) {
+                valueDisplay.textContent = getTranslation('autoLabel', 'Auto');
+            } else {
+                valueDisplay.textContent = val + unit;
+            }
+        };
+
         slider.addEventListener('input', (e) => {
             const value = parseFloat(e.target.value);
-            const unit = (slider.id.toLowerCase().includes('rate') || slider.id.toLowerCase().includes('speed') || slider.id.toLowerCase().includes('freq')) ? ' Hz' : '';
-            valueDisplay.textContent = e.target.value + unit;
-            // Ensure currentAudioConfig[effectKey] exists
+            updateDisplay(value);
             if (currentAudioConfig[effectKey]) {
                 currentAudioConfig[effectKey][formattedConfigKey] = value;
                 console.log(`[populateConfigOptions] Updated currentAudioConfig['${effectKey}'].${formattedConfigKey} to: ${value}`);
@@ -908,6 +915,9 @@ function populateConfigOptions(effectType) {
                 console.error(`[populateConfigOptions] effectKey '${effectKey}' not found in currentAudioConfig.`);
             }
         });
+
+        // Initialize display
+        updateDisplay(parseFloat(slider.value));
     });
 }
 
@@ -1738,7 +1748,11 @@ function applyHQEffect(inputBuffer, userConfig = {}) {
     const config = { ...currentAudioConfig['hq'], ...userConfig };
     return new Promise((resolve, reject) => {
         try {
-            const factor = Math.max(1, Math.min(config.oversample || 2, 4));
+            let factor = parseInt(config.oversample);
+            if (!factor) {
+                factor = Math.ceil(44100 / inputBuffer.sampleRate);
+            }
+            factor = Math.max(1, Math.min(factor, 4));
             if (!window.OfflineAudioContext) {
                 reject(new Error('OfflineAudioContext is not supported by this browser.'));
                 return;
