@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
 
 /* ==========================================================================
@@ -64,7 +64,7 @@
 body {
     background-color: var(--win-background-light);
     color: var(--win-text-primary);
-    font-family: 'Poppins', sans-serif;
+    font-family: 'Nunito', sans-serif;
     font-size: 16px;
     line-height: 1.6;
     margin: 0;
@@ -78,7 +78,7 @@ body {
 
 main > section {
     margin-bottom: var(--spacing-xl);
-    padding: var(--spacing-lg);
+    padding: var(--spacing-xl);
 }
 
 /* ==========================================================================
@@ -100,6 +100,72 @@ main > section {
     font-family: 'Patrick Hand', cursive;
 }
 
+.hero {
+    text-align: center;
+    padding: calc(var(--spacing-xl) * 2) var(--spacing-lg);
+}
+
+.hero-title {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 3rem;
+    margin-bottom: var(--spacing-sm);
+}
+
+.hero-subtitle {
+    font-size: 1.25rem;
+    color: var(--win-text-secondary);
+}
+
+/* Layout wrappers */
+.app-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: var(--spacing-lg) var(--spacing-xl);
+}
+
+nav.navbar {
+    margin-top: var(--spacing-lg);
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-lg);
+}
+
+.nav-link {
+    color: var(--win-primary-accent);
+    transition: color var(--anim-duration-fast) var(--anim-ease-out);
+}
+
+.nav-link:hover {
+    color: var(--win-primary-accent-hover);
+}
+
+.section {
+    margin-bottom: calc(var(--spacing-xl) * 1.5);
+}
+
+.section-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.text-accent {
+    color: var(--win-primary-accent);
+}
+
+/* Transformation option grid */
+.transform-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.transform-option {
+    padding: var(--spacing-lg);
+    text-align: center;
+}
+
 /* ==========================================================================
    4. COMPONENT STYLES & INDICATORS
    ========================================================================== */
@@ -107,14 +173,14 @@ main > section {
     background-color: var(--win-surface-light-transparent);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: none; /* Removed border, rely on shadow */
+    border: none;
     border-radius: var(--win-rounded-xl);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
 }
 
 .c-button {
     border-radius: var(--win-rounded-md);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     transition: background-color var(--anim-duration-fast) var(--anim-ease-out),
                 border-color var(--anim-duration-fast) var(--anim-ease-out),
                 color var(--anim-duration-fast) var(--anim-ease-out),
@@ -125,7 +191,7 @@ main > section {
 
 .c-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
 }
 
 .c-button:active {
