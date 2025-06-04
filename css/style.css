@@ -1,27 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
 
 /* ==========================================================================
    1. DESIGN TOKENS (VARIABLES)
    ========================================================================== */
 :root {
-    /* Existing Color Palette */
-    --win-primary-accent: #4F46E5; /* New primary accent */
-    --win-primary-accent-hover: #4338CA; /* Darker shade for hover */
-    --win-background-light: #F0F4FF; /* Updated background light */
-    --win-surface-light: #FFFFFF; /* For elements like cards, was E9E9E9, but white is common for surfaces */
-    --win-surface-light-transparent: rgba(255, 255, 255, 0.8); /* For acrylic effect */
-    --win-surface-light-border: #DCD7D0; /* Border for light surfaces (warmer gray) */
-    --win-text-primary: #1A1A1A; /* Near black for primary text */
-    --win-text-secondary: #505050; /* Softer gray for secondary text */
-    --win-text-tertiary: #767676; /* Even softer for less important text */
+    /* Vastia 1.0 Color Palette */
+    --win-primary-accent: #FF6B6B;
+    --win-primary-accent-hover: #FF5252;
+    --win-background-light: #FAF8F5;
+    --win-surface-light: #FFFFFF;
+    --win-surface-light-transparent: rgba(255, 255, 255, 0.9);
+    --win-surface-light-border: #E8E1DB;
+    --win-text-primary: #333333;
+    --win-text-secondary: #555555;
+    --win-text-tertiary: #777777;
     --win-text-on-accent: #FFFFFF; /* Text on accent background */
 
     /* Standard rounded corner values */
-    --win-rounded-sm: 4px;
-    --win-rounded-md: 10px; /* Updated for more rounded buttons */
-    --win-rounded-lg: 12px; /* Updated for radio labels and general use */
-    --win-rounded-xl: 16px; /* Added for cards and larger elements */
+    --win-rounded-sm: 6px;
+    --win-rounded-md: 12px;
+    --win-rounded-lg: 16px;
+    --win-rounded-xl: 24px;
 
     /* Spacing Tokens */
     --spacing-unit: 4px;
@@ -46,11 +46,11 @@
     --color-warning-bg: rgba(255, 185, 0, 0.1);
     --color-error: #D83B01;   /* Windows Red */
     --color-error-bg: rgba(216, 59, 1, 0.1);
-    --color-info: #007ACC; /* New info blue, distinct from new red accent */
-    --color-info-bg: rgba(0, 122, 204, 0.1); /* Adjusted for new info blue */
+    --color-info: #FF6B6B;
+    --color-info-bg: rgba(255, 107, 107, 0.1);
 
     /* More Surface/Text Shades */
-    --win-surface-light-hover: rgba(0, 0, 0, 0.05); /* For subtle hover on light surfaces */
+    --win-surface-light-hover: rgba(0, 0, 0, 0.04);
     --win-text-disabled: #A1A1A1;
 
     /* Border Style Tokens */
@@ -64,7 +64,7 @@
 body {
     background-color: var(--win-background-light);
     color: var(--win-text-primary);
-    font-family: 'Nunito', sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 16px;
     line-height: 1.6;
     margin: 0;
@@ -97,7 +97,7 @@ main > section {
 }
 
 .font-accent {
-    font-family: 'Caveat', cursive;
+    font-family: 'Patrick Hand', cursive;
 }
 
 /* ==========================================================================
@@ -108,13 +108,13 @@ main > section {
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     border: none; /* Removed border, rely on shadow */
-    border-radius: var(--win-rounded-xl); /* Increased border radius */
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1); /* Added noticeable shadow */
+    border-radius: var(--win-rounded-xl);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
 }
 
 .c-button {
-    border-radius: var(--win-rounded-md); /* Uses updated --win-rounded-md (10px) */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* Added subtle default shadow */
+    border-radius: var(--win-rounded-md);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
     transition: background-color var(--anim-duration-fast) var(--anim-ease-out),
                 border-color var(--anim-duration-fast) var(--anim-ease-out),
                 color var(--anim-duration-fast) var(--anim-ease-out),
@@ -125,12 +125,12 @@ main > section {
 
 .c-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
 }
 
 .c-button:active {
     transform: translateY(1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
     filter: brightness(0.95);
 }
 
