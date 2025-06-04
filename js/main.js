@@ -12,6 +12,7 @@ let selectedFile = null; // To store the original selected file
 let originalAudioBuffer = null; // To store the pristine decoded audio
 let isProcessing = false; // To track if an audio transformation is in progress
 let currentPlayerObjectUrl = null; // For managing the HTML5 player's Object URL
+let progressInterval = null; // Interval handle for progress updates
 
 // Reverb IR
 // let reverbIrBuffer = null;
@@ -169,6 +170,8 @@ const setProcessingState = (isProcessingActive) => {
     if (isProcessingActive) {
         console.log("Audio processing started...");
         if (loadingIndicatorElem) loadingIndicatorElem.classList.remove('hidden');
+        const progressElem = document.getElementById('progressPercent');
+        if (progressElem) progressElem.textContent = '0%';
         if (statusMessageElem) {
             statusMessageElem.textContent = '';
             statusMessageElem.className = 'text-center my-3 font-medium';
@@ -176,6 +179,7 @@ const setProcessingState = (isProcessingActive) => {
     } else {
         console.log("Audio processing finished.");
         if (loadingIndicatorElem) loadingIndicatorElem.classList.add('hidden');
+        stopProgressMonitoring('100%');
     }
 
     if (radios) {
@@ -200,6 +204,42 @@ const setProcessingState = (isProcessingActive) => {
         updateButtonStates(audioContext.state === 'running' && currentSource, audioContext.state === 'suspended', !!audioBuffer, !!audioBuffer);
     }
 };
+
+// --- Progress Monitoring Functions ---
+function startProgressMonitoring(ctx, duration) {
+    const progressElem = document.getElementById('progressPercent');
+    if (progressElem) progressElem.textContent = '0%';
+    if (progressInterval) clearInterval(progressInterval);
+    progressInterval = setInterval(() => {
+        const progress = Math.min(ctx.currentTime / duration, 1);
+        if (progressElem) progressElem.textContent = Math.floor(progress * 100) + '%';
+        if (progress >= 1) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+        }
+    }, 100);
+}
+
+function stopProgressMonitoring(finalValue = '100%') {
+    if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+    }
+    const progressElem = document.getElementById('progressPercent');
+    if (progressElem) progressElem.textContent = finalValue;
+}
+
+function renderWithProgress(offlineCtx) {
+    const duration = offlineCtx.length / offlineCtx.sampleRate;
+    startProgressMonitoring(offlineCtx, duration);
+    return offlineCtx.startRendering().then(buffer => {
+        stopProgressMonitoring('100%');
+        return buffer;
+    }).catch(err => {
+        stopProgressMonitoring('0%');
+        throw err;
+    });
+}
 
 // File Upload Logic
 document.addEventListener('DOMContentLoaded', () => {
@@ -647,7 +687,7 @@ function applyStereoWidening(inputBuffer) {
             }
             merger.connect(offlineCtx.destination);
             source.start(0);
-            offlineCtx.startRendering().then(renderedBuffer => {
+            renderWithProgress(offlineCtx).then(renderedBuffer => {
                 resolve(renderedBuffer);
             }).catch(err => {
                 reject(new Error("Rendering failed: " + err.message));
@@ -1167,7 +1207,7 @@ async function apply8DEffect(inputBuffer, userConfig = {}) {
             lfoPan2.start(0);
             lfoFilter.start(0);
             audioSource.start(0);
-            offlineCtx.startRendering()
+            renderWithProgress(offlineCtx)
                 .then(renderedBuffer => {
                     resolve(renderedBuffer);
                 })
@@ -1296,7 +1336,7 @@ async function apply16DEffect(inputBuffer, userConfig = {}) {
             lfoX.start(0);
             audioSource.start(0);
 
-            offlineCtx.startRendering()
+            renderWithProgress(offlineCtx)
                 .then(renderedBuffer => {
                     resolve(renderedBuffer);
                 })
@@ -1448,7 +1488,7 @@ async function apply32DEffect(inputBuffer, userConfig = {}) {
             lfoPanZ.start(0);
             audioSource.start(0);
 
-            offlineCtx.startRendering()
+            renderWithProgress(offlineCtx)
                 .then(renderedBuffer => {
                     resolve(renderedBuffer);
                 })
@@ -1539,7 +1579,7 @@ async function apply64DEffect(inputBuffer, userConfig = {}) {
             }
 
             lfoX.start(0); lfoY.start(0); lfoZ.start(0); audioSource.start(0);
-            offlineCtx.startRendering().then(resolve).catch(err => reject(new Error('64D effect rendering failed: ' + err.message)));
+            renderWithProgress(offlineCtx).then(resolve).catch(err => reject(new Error('64D effect rendering failed: ' + err.message)));
         } catch (error) {
             reject(new Error('Error in apply64DEffect: ' + error.message));
         }
@@ -1584,7 +1624,7 @@ function applyBassBoostEffect(inputBuffer, userConfig = {}) {
             source.connect(filter);
             filter.connect(offlineCtx.destination);
             source.start(0);
-            offlineCtx.startRendering().then(resolve).catch(err => reject(new Error('Bass boost rendering failed: ' + err.message)));
+            renderWithProgress(offlineCtx).then(resolve).catch(err => reject(new Error('Bass boost rendering failed: ' + err.message)));
         } catch (e) {
             reject(new Error('Error in applyBassBoostEffect: ' + e.message));
         }
@@ -1610,7 +1650,7 @@ function applyEchoEffect(inputBuffer, userConfig = {}) {
             delayNode.connect(merger);
             merger.connect(offlineCtx.destination);
             source.start(0);
-            offlineCtx.startRendering().then(resolve).catch(err => reject(new Error('Echo rendering failed: ' + err.message)));
+            renderWithProgress(offlineCtx).then(resolve).catch(err => reject(new Error('Echo rendering failed: ' + err.message)));
         } catch (e) {
             reject(new Error('Error in applyEchoEffect: ' + e.message));
         }
@@ -1627,7 +1667,7 @@ function applyPitchShiftEffect(inputBuffer, factor) {
             source.playbackRate.value = factor;
             source.connect(offlineCtx.destination);
             source.start(0);
-            offlineCtx.startRendering().then(resolve).catch(err => reject(new Error('Pitch shift failed: ' + err.message)));
+            renderWithProgress(offlineCtx).then(resolve).catch(err => reject(new Error('Pitch shift failed: ' + err.message)));
         } catch (e) {
             reject(new Error('Error in applyPitchShiftEffect: ' + e.message));
         }
@@ -1673,7 +1713,7 @@ async function applyReverbOnlyEffect(inputBuffer, userConfig = {}) {
             convolver.connect(wet);
             wet.connect(offlineCtx.destination);
             source.start(0);
-            offlineCtx.startRendering().then(resolve).catch(err => reject(new Error('Reverb rendering failed: ' + err.message)));
+            renderWithProgress(offlineCtx).then(resolve).catch(err => reject(new Error('Reverb rendering failed: ' + err.message)));
         } catch (e) {
             reject(new Error('Error in applyReverbOnlyEffect: ' + e.message));
         }
