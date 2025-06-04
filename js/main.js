@@ -40,6 +40,7 @@ let currentAudioConfig = {
     'speedup': { factor: 1.25 },
     'slowdown': { factor: 0.8 },
     'reverb': { mix: 0.5 }
+    ,'hq': { oversample: 2 }
 };
 // UI elements for the configuration panel
 let toggleConfigButton, configPanel, configOptionsContainer, applyConfigButton;
@@ -831,6 +832,10 @@ function populateConfigOptions(effectType) {
             <div class="space-y-1"><label for="32dPanZWidth" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('panZWidth32D', 'Z-Width:')}</label><input type="range" id="32dPanZWidth" min="0" max="10" step="0.5" value="${config.panZWidth}" class="config-slider"><span id="32dPanZWidthValue" class="text-xs text-[var(--win-text-tertiary)]">${config.panZWidth}</span></div>
             <div class="space-y-1"><label for="32dReverbMix" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('reverbMix32D', 'Reverb Mix:')}</label><input type="range" id="32dReverbMix" min="0" max="1" step="0.05" value="${config.reverbMix}" class="config-slider"><span id="32dReverbMixValue" class="text-xs text-[var(--win-text-tertiary)]">${config.reverbMix}</span></div>
         `;
+    } else if (effectType === 'hq') {
+        optionsHtml += `
+            <div class="space-y-1"><label for="hqOversample" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('hqOversample', 'Oversample:')}</label><input type="range" id="hqOversample" min="1" max="4" step="1" value="${config.oversample}" class="config-slider"><span id="hqOversampleValue" class="text-xs text-[var(--win-text-tertiary)]">${config.oversample}</span></div>
+        `;
     }
     configOptionsContainer.innerHTML = optionsHtml;
     document.querySelectorAll('.config-slider').forEach(slider => {
@@ -849,6 +854,9 @@ function populateConfigOptions(effectType) {
         } else if (slider.id.startsWith('32d')) {
             effectKey = '32d';
             rawConfigKey = slider.id.substring(3); // Remove "32d" prefix
+        } else if (slider.id.startsWith('hq')) {
+            effectKey = 'hq';
+            rawConfigKey = slider.id.substring(2);
         } else {
             console.error('Could not determine effectKey for slider ID:', slider.id);
             return; // Skip this slider if effectKey is unknown
@@ -878,6 +886,8 @@ function populateConfigOptions(effectType) {
             else if (slider.id.includes('PanZRate')) formattedConfigKey = 'panZRate';
             else if (slider.id.includes('PanZWidth')) formattedConfigKey = 'panZWidth';
             else if (slider.id.includes('ReverbMix')) formattedConfigKey = 'reverbMix';
+        } else if (effectKey === 'hq') {
+            if (slider.id.includes('Oversample')) formattedConfigKey = 'oversample';
         }
 
         // Ensure formattedConfigKey was actually found/set by the conditions above.
@@ -972,6 +982,9 @@ function triggerAudioProcessing() {
     } else if (selectedTransformation === 'slowdown') {
         effectPromise = applySpeedChangeEffect(originalAudioBuffer, effectConfig.factor || 0.8);
         effectDisplayName = getTranslation('effectNameSlowDown', "Slow Down");
+    } else if (selectedTransformation === 'hq') {
+        effectPromise = applyHQEffect(originalAudioBuffer, effectConfig);
+        effectDisplayName = getTranslation('effectNameHQ', "Quality Boost");
     } else if (selectedTransformation === 'reverb') {
         effectPromise = applyReverbOnlyEffect(originalAudioBuffer, effectConfig);
         effectDisplayName = getTranslation('effectNameReverb', "Reverb Only");
@@ -1716,6 +1729,35 @@ async function applyReverbOnlyEffect(inputBuffer, userConfig = {}) {
             renderWithProgress(offlineCtx).then(resolve).catch(err => reject(new Error('Reverb rendering failed: ' + err.message)));
         } catch (e) {
             reject(new Error('Error in applyReverbOnlyEffect: ' + e.message));
+        }
+    });
+}
+
+// High Quality Oversampling Effect
+function applyHQEffect(inputBuffer, userConfig = {}) {
+    const config = { ...currentAudioConfig['hq'], ...userConfig };
+    return new Promise((resolve, reject) => {
+        try {
+            const factor = Math.max(1, Math.min(config.oversample || 2, 4));
+            if (!window.OfflineAudioContext) {
+                reject(new Error('OfflineAudioContext is not supported by this browser.'));
+                return;
+            }
+            const upCtx = new OfflineAudioContext(inputBuffer.numberOfChannels, inputBuffer.length * factor, inputBuffer.sampleRate * factor);
+            const upSrc = upCtx.createBufferSource();
+            upSrc.buffer = inputBuffer;
+            upSrc.connect(upCtx.destination);
+            upSrc.start(0);
+            renderWithProgress(upCtx).then(upBuffer => {
+                const downCtx = new OfflineAudioContext(inputBuffer.numberOfChannels, inputBuffer.length, inputBuffer.sampleRate);
+                const downSrc = downCtx.createBufferSource();
+                downSrc.buffer = upBuffer;
+                downSrc.connect(downCtx.destination);
+                downSrc.start(0);
+                return renderWithProgress(downCtx);
+            }).then(resolve).catch(err => reject(new Error('Quality Boost failed: ' + err.message)));
+        } catch (e) {
+            reject(new Error('Error in applyHQEffect: ' + e.message));
         }
     });
 }
