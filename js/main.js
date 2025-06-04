@@ -1,4 +1,5 @@
-console.log("main.js loaded");
+const APP_VERSION = '1.1.1';
+console.log(`main.js loaded - Vastia ${APP_VERSION}`);
 
 // --- Localization Globals ---
 let currentLanguage = 'ja'; // Default language
@@ -112,8 +113,9 @@ async function setLanguage(lang) {
         applyTranslations();
         // Special handling for dynamically generated messages after initial load
         // This might involve re-initializing certain UI text if it's set outside applyTranslations
-        const fileNameElement = document.getElementById('fileName'); // Ensure it's defined in this scope or passed
-        const statusMessageElement = document.getElementById('statusMessage'); // Ensure it's defined
+        // Use globally assigned elements for dynamic text updates
+        fileNameElement = document.getElementById('fileName');
+        statusMessageElement = document.getElementById('statusMessage');
 
         if (selectedFile && fileNameElement) {
              fileNameElement.textContent = getTranslation('fileSelected', selectedFile.name);
