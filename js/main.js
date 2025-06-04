@@ -326,7 +326,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         audioBuffer = null;
                         selectedFile = null;
                         updateButtonStates(false, false, false, false);
-                        if (statusMessageElement) statusMessageElement.textContent = getTranslation('audioDecodeError', error.message);
+                        if (statusMessageElement) {
+                            statusMessageElement.textContent = getTranslation('audioDecodeError', error.message);
+                            statusMessageElement.className = 'text-center my-3 font-medium text-red-600';
+                        }
 
                     });
                 };
@@ -336,7 +339,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     audioBuffer = null;
                     selectedFile = null;
                     updateButtonStates(false, false, false, false);
-                     if (statusMessageElement) statusMessageElement.textContent = getTranslation('fileReadError', error.message);
+                    if (statusMessageElement) {
+                        statusMessageElement.textContent = getTranslation('fileReadError', error.message);
+                        statusMessageElement.className = 'text-center my-3 font-medium text-red-600';
+                    }
                 };
                 reader.readAsArrayBuffer(selectedFile);
 
@@ -640,7 +646,10 @@ function handleFileDrop(event) {
                 audioBuffer = null;
                 selectedFile = null;
                 updateButtonStates(false, false, false, false);
-                if (statusMessageElement) statusMessageElement.textContent = getTranslation('audioDecodeError', error.message);
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = getTranslation('audioDecodeError', error.message);
+                    statusMessageElement.className = 'text-center my-3 font-medium text-red-600';
+                }
             });
         };
         reader.onerror = (error) => {
@@ -649,7 +658,10 @@ function handleFileDrop(event) {
             audioBuffer = null;
             selectedFile = null;
             updateButtonStates(false, false, false, false);
-            if (statusMessageElement) statusMessageElement.textContent = getTranslation('fileReadError', error.message);
+            if (statusMessageElement) {
+                statusMessageElement.textContent = getTranslation('fileReadError', error.message);
+                statusMessageElement.className = 'text-center my-3 font-medium text-red-600';
+            }
         };
         reader.readAsArrayBuffer(selectedFile);
     } else {
@@ -1120,7 +1132,7 @@ async function apply8DEffect(inputBuffer, userConfig = {}) {
                             irArrayBuffer.slice(0), // Use slice(0) to create a copy if needed
                             (buffer) => res(buffer),
                             (err) => {
-                                console.error(`Error decoding Reverb IR for ${offlineCtx.sampleRate}Hz context:`, err);
+                                console.error(`Error decoding Reverb IR for 8D effect in ${offlineCtx.sampleRate}Hz context:`, err);
                                 rej(err); // Propagate error for this specific decoding attempt
                             }
                         );
@@ -1544,11 +1556,17 @@ async function apply64DEffect(inputBuffer, userConfig = {}) {
                 const irArrayBuffer = await getReverbIrArrayBuffer('assets/irs/default_reverb.wav');
                 if (irArrayBuffer) {
                     decodedReverbIrBuffer = await new Promise((res, rej) => {
-                        offlineCtx.decodeAudioData(irArrayBuffer.slice(0), b => res(b), err => rej(err));
+                        offlineCtx.decodeAudioData(irArrayBuffer.slice(0),
+                            (buffer) => res(buffer),
+                            (err) => {
+                                console.error(`Error decoding Reverb IR for 64D effect in ${offlineCtx.sampleRate}Hz context:`, err);
+                                rej(err);
+                            }
+                        );
                     });
                 }
             } catch (error) {
-                console.warn('Reverb IR processing failed for 64D effect:', error.message);
+                console.warn('Reverb IR processing failed for 64D effect, proceeding without reverb. Error:', error.message);
             }
 
             const audioSource = offlineCtx.createBufferSource();
@@ -1711,34 +1729,63 @@ async function applyReverbOnlyEffect(inputBuffer, userConfig = {}) {
                 reject(new Error('OfflineAudioContext is not supported by this browser.'));
                 return;
             }
+            // Ensure stereo output for reverb
             const offlineCtx = new OfflineAudioContext(2, inputBuffer.length, inputBuffer.sampleRate);
             let decodedReverbIrBuffer = null;
             try {
                 const irArrayBuffer = await getReverbIrArrayBuffer('assets/irs/default_reverb.wav');
                 if (irArrayBuffer) {
                     decodedReverbIrBuffer = await new Promise((res, rej) => {
-                        offlineCtx.decodeAudioData(irArrayBuffer.slice(0), b => res(b), err => rej(err));
+                        offlineCtx.decodeAudioData(
+                            irArrayBuffer.slice(0), // Use .slice(0)
+                            (buffer) => res(buffer),
+                            (err) => {
+                                console.error(`Error decoding Reverb IR for ReverbOnly effect in ${offlineCtx.sampleRate}Hz context:`, err);
+                                rej(err);
+                            }
+                        );
                     });
+                    console.log(`Reverb IR decoded successfully for ReverbOnly effect.`);
                 }
             } catch (error) {
-                console.warn('Reverb IR processing failed for reverb effect:', error.message);
+                console.warn(`Reverb IR processing failed for ReverbOnly effect, proceeding with dry signal only. Error:`, error.message);
+                // decodedReverbIrBuffer remains null
             }
 
             const source = offlineCtx.createBufferSource();
             source.buffer = inputBuffer;
+
             const dry = offlineCtx.createGain();
-            const wet = offlineCtx.createGain();
-            dry.gain.value = 1 - config.mix;
-            wet.gain.value = config.mix;
-            const convolver = offlineCtx.createConvolver();
-            convolver.buffer = decodedReverbIrBuffer;
-            source.connect(dry);
-            dry.connect(offlineCtx.destination);
-            source.connect(convolver);
-            convolver.connect(wet);
-            wet.connect(offlineCtx.destination);
+            source.connect(dry); // Connect source to dry path
+
+            if (decodedReverbIrBuffer) {
+                const wet = offlineCtx.createGain();
+                const convolver = offlineCtx.createConvolver();
+                convolver.buffer = decodedReverbIrBuffer;
+                convolver.normalize = true;
+
+                source.connect(convolver); // Source also goes to convolver
+                convolver.connect(wet);
+                wet.connect(offlineCtx.destination);
+
+                dry.gain.value = 1 - config.mix;
+                wet.gain.value = config.mix;
+                dry.connect(offlineCtx.destination); // Connect dry to destination as well
+            } else {
+                // No reverb, only dry signal
+                dry.gain.value = 1.0;
+                dry.connect(offlineCtx.destination); // Connect dry to destination
+                // 'wet' gain and 'convolver' are not created or connected if no reverb
+            }
+
             source.start(0);
-            renderWithProgress(offlineCtx).then(resolve).catch(err => reject(new Error('Reverb rendering failed: ' + err.message)));
+            renderWithProgress(offlineCtx)
+                .then(renderedBuffer => {
+                    resolve(renderedBuffer);
+                })
+                .catch(err => {
+                    reject(new Error('ReverbOnly effect rendering failed: ' + err.message));
+                });
         } catch (e) {
             reject(new Error('Error in applyReverbOnlyEffect: ' + e.message));
         }
