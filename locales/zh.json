@@ -82,6 +82,7 @@
   "maxPlanFeature2": "无限制访问 Vastia Max 模式",
   "maxPlanFeature3": "访问研究预览功能",
   "maxPlanFeature4": "下载完整的源代码，允许衍生作品",
+  "selectPlanButton": "选择方案",
   "htuStepConfigHeading": "（可选）关于配置设置",
   "htuStepConfigDesc": "如需更详细的自定义，请单击“显示配置”按钮打开设置面板。在这里，您可以调整各种参数，例如混响类型和声像深度。进行更改后，按“应用配置”按钮以反映它们。"
 }

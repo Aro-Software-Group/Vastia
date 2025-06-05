@@ -82,6 +82,7 @@
   "maxPlanFeature2": "Accès illimité au Vastia Max Mode",
   "maxPlanFeature3": "Accès aux fonctionnalités en avant-première de recherche",
   "maxPlanFeature4": "Télécharger le code source complet, œuvres dérivées autorisées",
+  "selectPlanButton": "Choisir ce plan",
   "htuStepConfigHeading": "(Optionnel) À Propos des Paramètres de Configuration",
   "htuStepConfigDesc": "Pour une personnalisation plus détaillée, cliquez sur le bouton 'Afficher la configuration' pour ouvrir le panneau des paramètres. Ici, vous pouvez ajuster divers paramètres tels que le type de réverbération et la profondeur du panoramique. Après avoir effectué des modifications, appuyez sur le bouton 'Appliquer la configuration' pour les refléter."
 }
