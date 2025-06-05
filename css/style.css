@@ -1,3 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=M+PLUS+1p:wght@400;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap');
@@ -25,7 +28,11 @@
     --win-text-secondary: #555555;
     --win-text-tertiary: #777777;
     --win-text-on-accent: #FFFFFF; /* Text on accent background */
-    --font-heading: 'Poppins', 'Nunito', sans-serif;
+    --font-japanese: 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', 'M PLUS 1p', sans-serif;
+    --font-english: 'Inter', 'SF Pro Display', 'Segoe UI', '-apple-system', 'Nunito', sans-serif;
+    --font-heading: 'Poppins', var(--font-english);
+    --font-body: var(--font-english);
+    --font-handwriting: 'Patrick Hand', cursive;
     /* Dark theme tokens */
     --win-background-dark: #1f2023;
     --win-surface-dark: #25262b;
@@ -83,12 +90,20 @@ body {
     background: linear-gradient(180deg, var(--win-background-light) 0%, #ffffff 100%);
     background-attachment: fixed;
     color: var(--win-text-primary);
-    font-family: 'Nunito', sans-serif;
+    font-family: var(--font-body);
     font-size: 16px;
     line-height: 1.6;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+}
+
+html[lang="ja"] body {
+    font-family: var(--font-japanese);
+}
+
+html[lang="en"] body {
+    font-family: var(--font-english);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -642,3 +657,783 @@ nav.navbar {
         transition: none !important;
     }
 }
+
+/* ==========================================================================
+   5. TYPOGRAPHY
+   Official release typography system with multilingual font support
+   ========================================================================== */
+
+/* Font utility classes */
+.font-jp {
+    font-family: var(--font-japanese);
+}
+
+.font-en {
+    font-family: var(--font-english);
+}
+
+/* Display scale */
+.t-display-1 { font-size: 3.5rem; line-height: 1.2; }
+.t-display-2 { font-size: 3rem; line-height: 1.25; }
+.t-display-3 { font-size: 2.5rem; line-height: 1.3; }
+.t-display-4 { font-size: 2.25rem; line-height: 1.35; }
+.t-display-5 { font-size: 2rem; line-height: 1.4; }
+.t-display-6 { font-size: 1.75rem; line-height: 1.4; }
+
+/* Heading scale */
+.t-heading-1 { font-size: 2rem; line-height: 1.3; font-weight: 700; }
+.t-heading-2 { font-size: 1.75rem; line-height: 1.3; font-weight: 700; }
+.t-heading-3 { font-size: 1.5rem; line-height: 1.3; font-weight: 700; }
+.t-heading-4 { font-size: 1.25rem; line-height: 1.35; font-weight: 700; }
+.t-heading-5 { font-size: 1.125rem; line-height: 1.35; font-weight: 700; }
+.t-heading-6 { font-size: 1rem; line-height: 1.4; font-weight: 700; }
+
+/* Body text scale */
+.t-body-lg { font-size: 1.125rem; line-height: 1.6; }
+.t-body-md { font-size: 1rem; line-height: 1.6; }
+.t-body-sm { font-size: 0.875rem; line-height: 1.5; }
+
+/* Weight utilities */
+.t-weight-light { font-weight: 300; }
+.t-weight-normal { font-weight: 400; }
+.t-weight-bold { font-weight: 700; }
+
+/* Letter spacing utilities */
+.t-tracking-tight { letter-spacing: -0.02em; }
+.t-tracking-normal { letter-spacing: normal; }
+.t-tracking-wide { letter-spacing: 0.05em; }
+
+/* Text alignment */
+.t-left { text-align: left; }
+.t-center { text-align: center; }
+.t-right { text-align: right; }
+
+/* Paragraph styling */
+p.t-lead { font-size: 1.25rem; line-height: 1.6; margin-bottom: var(--spacing-md); }
+p.t-small { font-size: 0.875rem; }
+
+/* Link styling */
+a.t-link {
+    color: var(--win-primary-accent);
+    text-decoration: none;
+    transition: color var(--anim-duration-fast) var(--anim-ease-in-out);
+}
+a.t-link:hover {
+    color: var(--win-primary-accent-hover);
+}
+
+/* Lists */
+ul.t-list, ol.t-list {
+    margin: var(--spacing-md) 0;
+    padding-left: var(--spacing-lg);
+    line-height: 1.6;
+}
+
+/* Blockquote */
+blockquote.t-quote {
+    margin: var(--spacing-md) 0;
+    padding: var(--spacing-md);
+    border-left: 4px solid var(--win-primary-accent);
+    background: var(--win-surface-light-hover);
+    font-style: italic;
+}
+
+/* Code blocks */
+pre.t-code {
+    font-family: 'Courier New', Courier, monospace;
+    background: var(--win-surface-light-hover);
+    padding: var(--spacing-md);
+    overflow: auto;
+}
+
+/* Inline code */
+code.t-inline {
+    font-family: 'Courier New', Courier, monospace;
+    background: var(--win-surface-light-hover);
+    padding: 0 4px;
+    border-radius: var(--win-rounded-sm);
+}
+
+/* Text shadows for headings */
+.t-shadow {
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Responsive typography */
+@media (min-width: 768px) {
+    .t-display-1 { font-size: 4rem; }
+    .t-display-2 { font-size: 3.5rem; }
+    .t-display-3 { font-size: 3rem; }
+    .t-display-4 { font-size: 2.5rem; }
+    .t-display-5 { font-size: 2.25rem; }
+    .t-display-6 { font-size: 2rem; }
+}
+
+/* ==========================================================================
+   End Typography Section (~200 lines)
+   ========================================================================== */
+
+/* ==========================================================================
+   6. LAYOUT
+   Responsive grid and container utilities
+   ========================================================================== */
+
+/* Containers */
+.container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--spacing-lg);
+    padding-right: var(--spacing-lg);
+}
+
+@media (min-width: 640px) {
+    .container-sm { max-width: 640px; }
+}
+@media (min-width: 768px) {
+    .container-md { max-width: 768px; }
+}
+@media (min-width: 1024px) {
+    .container-lg { max-width: 1024px; }
+}
+@media (min-width: 1280px) {
+    .container-xl { max-width: 1280px; }
+}
+
+/* Grid system */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+}
+
+/* Column base */
+[class^="col-"] {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    box-sizing: border-box;
+}
+
+/* 12 column grid */
+.col-1 { flex: 0 0 8.3333%; max-width: 8.3333%; }
+.col-2 { flex: 0 0 16.6667%; max-width: 16.6667%; }
+.col-3 { flex: 0 0 25%; max-width: 25%; }
+.col-4 { flex: 0 0 33.3333%; max-width: 33.3333%; }
+.col-5 { flex: 0 0 41.6667%; max-width: 41.6667%; }
+.col-6 { flex: 0 0 50%; max-width: 50%; }
+.col-7 { flex: 0 0 58.3333%; max-width: 58.3333%; }
+.col-8 { flex: 0 0 66.6667%; max-width: 66.6667%; }
+.col-9 { flex: 0 0 75%; max-width: 75%; }
+.col-10 { flex: 0 0 83.3333%; max-width: 83.3333%; }
+.col-11 { flex: 0 0 91.6667%; max-width: 91.6667%; }
+.col-12 { flex: 0 0 100%; max-width: 100%; }
+
+/* Gap utilities */
+.gap-xs { gap: var(--spacing-xs); }
+.gap-sm { gap: var(--spacing-sm); }
+.gap-md { gap: var(--spacing-md); }
+.gap-lg { gap: var(--spacing-lg); }
+.gap-xl { gap: var(--spacing-xl); }
+
+/* Justify utilities */
+.justify-start { justify-content: flex-start; }
+.justify-center { justify-content: center; }
+.justify-end { justify-content: flex-end; }
+.justify-between { justify-content: space-between; }
+.justify-around { justify-content: space-around; }
+
+/* Align items utilities */
+.items-start { align-items: flex-start; }
+.items-center { align-items: center; }
+.items-end { align-items: flex-end; }
+.items-stretch { align-items: stretch; }
+
+/* Flex direction */
+.flex-row { flex-direction: row; }
+.flex-column { flex-direction: column; }
+
+/* Order utilities */
+.order-1 { order: 1; }
+.order-2 { order: 2; }
+.order-3 { order: 3; }
+.order-4 { order: 4; }
+.order-5 { order: 5; }
+.order-first { order: -9999; }
+.order-last { order: 9999; }
+
+/* Responsive helpers */
+@media (min-width: 768px) {
+    .col-md-6 { flex: 0 0 50%; max-width: 50%; }
+    .col-md-4 { flex: 0 0 33.3333%; max-width: 33.3333%; }
+    .col-md-3 { flex: 0 0 25%; max-width: 25%; }
+}
+
+@media (min-width: 1024px) {
+    .col-lg-6 { flex: 0 0 50%; max-width: 50%; }
+    .col-lg-4 { flex: 0 0 33.3333%; max-width: 33.3333%; }
+    .col-lg-3 { flex: 0 0 25%; max-width: 25%; }
+}
+
+/* ==========================================================================
+   End Layout Section (~200 lines)
+   ========================================================================== */
+
+/* ==========================================================================
+   7. COMPONENTS
+   Button styles, cards, alerts and badges
+   ========================================================================== */
+
+/* Buttons */
+.btn {
+    display: inline-block;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--win-rounded-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--anim-duration-fast) var(--anim-ease-in-out),
+                color var(--anim-duration-fast) var(--anim-ease-in-out);
+    text-align: center;
+    border: none;
+}
+
+.btn-primary {
+    background: var(--win-primary-accent);
+    color: var(--win-text-on-accent);
+}
+.btn-primary:hover {
+    background: var(--win-primary-accent-hover);
+}
+
+.btn-secondary {
+    background: var(--win-surface-light);
+    color: var(--win-text-primary);
+    border: var(--border-standard);
+}
+.btn-secondary:hover {
+    background: var(--win-surface-light-hover);
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--win-primary-accent);
+    border: 2px solid var(--win-primary-accent);
+}
+.btn-outline:hover {
+    color: var(--win-text-on-accent);
+    background: var(--win-primary-accent);
+}
+
+/* Card component */
+.card {
+    background: var(--win-surface-light);
+    border-radius: var(--win-rounded-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-elevation-high);
+    border: var(--border-standard);
+}
+
+.card-header { margin-bottom: var(--spacing-md); }
+.card-title {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-sm);
+}
+.card-content { font-size: 1rem; }
+
+/* Alert component */
+.alert {
+    border-radius: var(--win-rounded-md);
+    padding: var(--spacing-md);
+    margin: var(--spacing-md) 0;
+}
+.alert-success {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+    border-left: 4px solid var(--color-success);
+}
+.alert-error {
+    background: var(--color-error-bg);
+    color: var(--color-error);
+    border-left: 4px solid var(--color-error);
+}
+.alert-warning {
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
+    border-left: 4px solid var(--color-warning);
+}
+.alert-info {
+    background: var(--color-info-bg);
+    color: var(--color-info);
+    border-left: 4px solid var(--color-info);
+}
+
+/* Badge component */
+.badge {
+    display: inline-block;
+    padding: 0.25em 0.5em;
+    border-radius: var(--win-rounded-sm);
+    font-size: 0.75rem;
+    background: var(--win-primary-accent);
+    color: var(--win-text-on-accent);
+}
+
+.badge-secondary {
+    background: var(--win-surface-light);
+    color: var(--win-text-primary);
+    border: var(--border-standard);
+}
+
+/* Form elements */
+.form-control {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--win-rounded-sm);
+    border: var(--border-standard);
+    background: var(--win-surface-light);
+    color: var(--win-text-primary);
+    font-size: 1rem;
+    transition: border-color var(--anim-duration-fast) var(--anim-ease-in-out);
+}
+.form-control:focus {
+    outline: none;
+    border-color: var(--win-primary-accent);
+}
+
+.form-group {
+    margin-bottom: var(--spacing-md);
+}
+
+/* Modal component */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--anim-duration-normal) var(--anim-ease-in-out);
+}
+.modal.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+.modal-content {
+    background: var(--win-surface-light);
+    border-radius: var(--win-rounded-lg);
+    padding: var(--spacing-lg);
+    width: 90%;
+    max-width: 500px;
+    box-shadow: var(--shadow-elevation-high);
+}
+
+/* Tabs component */
+.tabs {
+    display: flex;
+    border-bottom: var(--border-standard);
+}
+.tab-item {
+    padding: var(--spacing-sm) var(--spacing-md);
+    cursor: pointer;
+    margin-bottom: -1px;
+}
+.tab-item.active {
+    border-bottom: 3px solid var(--win-primary-accent);
+    color: var(--win-primary-accent);
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    list-style: none;
+    padding: 0;
+    gap: var(--spacing-sm);
+}
+.pagination li {
+    display: block;
+}
+.pagination a {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: var(--border-standard);
+    border-radius: var(--win-rounded-sm);
+    color: var(--win-text-primary);
+    text-decoration: none;
+}
+.pagination a:hover {
+    background: var(--win-surface-light-hover);
+}
+
+/* ==========================================================================
+   End Components Section (~200 lines)
+   ========================================================================== */
+
+/* ==========================================================================
+   8. UTILITIES
+   Spacing, color, and display helper classes
+   ========================================================================== */
+
+/* Margin utilities */
+.m-0 { margin: 0 !important; }
+.m-1 { margin: var(--spacing-xs) !important; }
+.m-2 { margin: var(--spacing-sm) !important; }
+.m-3 { margin: var(--spacing-md) !important; }
+.m-4 { margin: var(--spacing-lg) !important; }
+.m-5 { margin: var(--spacing-xl) !important; }
+
+.mt-0 { margin-top: 0 !important; }
+.mt-1 { margin-top: var(--spacing-xs) !important; }
+.mt-2 { margin-top: var(--spacing-sm) !important; }
+.mt-3 { margin-top: var(--spacing-md) !important; }
+.mt-4 { margin-top: var(--spacing-lg) !important; }
+.mt-5 { margin-top: var(--spacing-xl) !important; }
+
+.mb-0 { margin-bottom: 0 !important; }
+.mb-1 { margin-bottom: var(--spacing-xs) !important; }
+.mb-2 { margin-bottom: var(--spacing-sm) !important; }
+.mb-3 { margin-bottom: var(--spacing-md) !important; }
+.mb-4 { margin-bottom: var(--spacing-lg) !important; }
+.mb-5 { margin-bottom: var(--spacing-xl) !important; }
+
+.ml-0 { margin-left: 0 !important; }
+.ml-1 { margin-left: var(--spacing-xs) !important; }
+.ml-2 { margin-left: var(--spacing-sm) !important; }
+.ml-3 { margin-left: var(--spacing-md) !important; }
+.ml-4 { margin-left: var(--spacing-lg) !important; }
+.ml-5 { margin-left: var(--spacing-xl) !important; }
+
+.mr-0 { margin-right: 0 !important; }
+.mr-1 { margin-right: var(--spacing-xs) !important; }
+.mr-2 { margin-right: var(--spacing-sm) !important; }
+.mr-3 { margin-right: var(--spacing-md) !important; }
+.mr-4 { margin-right: var(--spacing-lg) !important; }
+.mr-5 { margin-right: var(--spacing-xl) !important; }
+
+/* Padding utilities */
+.p-0 { padding: 0 !important; }
+.p-1 { padding: var(--spacing-xs) !important; }
+.p-2 { padding: var(--spacing-sm) !important; }
+.p-3 { padding: var(--spacing-md) !important; }
+.p-4 { padding: var(--spacing-lg) !important; }
+.p-5 { padding: var(--spacing-xl) !important; }
+
+.pt-0 { padding-top: 0 !important; }
+.pt-1 { padding-top: var(--spacing-xs) !important; }
+.pt-2 { padding-top: var(--spacing-sm) !important; }
+.pt-3 { padding-top: var(--spacing-md) !important; }
+.pt-4 { padding-top: var(--spacing-lg) !important; }
+.pt-5 { padding-top: var(--spacing-xl) !important; }
+
+.pb-0 { padding-bottom: 0 !important; }
+.pb-1 { padding-bottom: var(--spacing-xs) !important; }
+.pb-2 { padding-bottom: var(--spacing-sm) !important; }
+.pb-3 { padding-bottom: var(--spacing-md) !important; }
+.pb-4 { padding-bottom: var(--spacing-lg) !important; }
+.pb-5 { padding-bottom: var(--spacing-xl) !important; }
+
+.pl-0 { padding-left: 0 !important; }
+.pl-1 { padding-left: var(--spacing-xs) !important; }
+.pl-2 { padding-left: var(--spacing-sm) !important; }
+.pl-3 { padding-left: var(--spacing-md) !important; }
+.pl-4 { padding-left: var(--spacing-lg) !important; }
+.pl-5 { padding-left: var(--spacing-xl) !important; }
+
+.pr-0 { padding-right: 0 !important; }
+.pr-1 { padding-right: var(--spacing-xs) !important; }
+.pr-2 { padding-right: var(--spacing-sm) !important; }
+.pr-3 { padding-right: var(--spacing-md) !important; }
+.pr-4 { padding-right: var(--spacing-lg) !important; }
+.pr-5 { padding-right: var(--spacing-xl) !important; }
+
+/* Text color utilities */
+.text-primary { color: var(--win-text-primary) !important; }
+.text-secondary { color: var(--win-text-secondary) !important; }
+.text-tertiary { color: var(--win-text-tertiary) !important; }
+.text-accent { color: var(--win-primary-accent) !important; }
+.text-on-accent { color: var(--win-text-on-accent) !important; }
+
+/* Background color utilities */
+.bg-primary { background: var(--win-primary-accent) !important; color: var(--win-text-on-accent) !important; }
+.bg-surface { background: var(--win-surface-light) !important; }
+.bg-surface-dark { background: var(--win-surface-dark) !important; }
+.bg-light { background: var(--win-background-light) !important; }
+.bg-dark { background: var(--win-background-dark) !important; color: var(--win-text-light-primary) !important; }
+
+/* Display utilities */
+.d-block { display: block !important; }
+.d-inline { display: inline !important; }
+.d-inline-block { display: inline-block !important; }
+.d-flex { display: flex !important; }
+.d-grid { display: grid !important; }
+.d-none { display: none !important; }
+
+/* Overflow utilities */
+.overflow-hidden { overflow: hidden !important; }
+.overflow-scroll { overflow: scroll !important; }
+.overflow-auto { overflow: auto !important; }
+
+/* Position utilities */
+.position-relative { position: relative !important; }
+.position-absolute { position: absolute !important; }
+.position-fixed { position: fixed !important; }
+
+/* Z-index utilities */
+.z-0 { z-index: 0 !important; }
+.z-10 { z-index: 10 !important; }
+.z-20 { z-index: 20 !important; }
+.z-30 { z-index: 30 !important; }
+.z-40 { z-index: 40 !important; }
+.z-50 { z-index: 50 !important; }
+
+/* Width utilities */
+.w-25 { width: 25% !important; }
+.w-50 { width: 50% !important; }
+.w-75 { width: 75% !important; }
+.w-100 { width: 100% !important; }
+.max-w-full { max-width: 100% !important; }
+
+/* Height utilities */
+.h-25 { height: 25% !important; }
+.h-50 { height: 50% !important; }
+.h-75 { height: 75% !important; }
+.h-100 { height: 100% !important; }
+.min-h-full { min-height: 100% !important; }
+
+/* Rounded utilities */
+.rounded-sm { border-radius: var(--win-rounded-sm) !important; }
+.rounded-md { border-radius: var(--win-rounded-md) !important; }
+.rounded-lg { border-radius: var(--win-rounded-lg) !important; }
+.rounded-xl { border-radius: var(--win-rounded-xl) !important; }
+.rounded-full { border-radius: 9999px !important; }
+
+/* Shadow utilities */
+.shadow { box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important; }
+.shadow-lg { box-shadow: 0 8px 16px rgba(0,0,0,0.15) !important; }
+
+/* Cursor utilities */
+.cursor-pointer { cursor: pointer !important; }
+.cursor-default { cursor: default !important; }
+
+/* Opacity utilities */
+.opacity-0 { opacity: 0 !important; }
+.opacity-50 { opacity: 0.5 !important; }
+.opacity-75 { opacity: 0.75 !important; }
+.opacity-100 { opacity: 1 !important; }
+
+/* ==========================================================================
+   End Utilities Section (~200 lines)
+   ========================================================================== */
+
+/* ==========================================================================
+   9. ANIMATIONS
+   Utility classes for simple transitions and keyframes
+   ========================================================================== */
+
+@keyframes slideInUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes slideInDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes slideInLeft { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes slideInRight { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+.anim-fadeIn { animation: fadeIn var(--anim-duration-normal) var(--anim-ease-out); }
+.anim-fadeInUp { animation: fadeInUp var(--anim-duration-normal) var(--anim-ease-out); }
+.anim-slideInUp { animation: slideInUp var(--anim-duration-normal) var(--anim-ease-out); }
+.anim-slideInDown { animation: slideInDown var(--anim-duration-normal) var(--anim-ease-out); }
+.anim-slideInLeft { animation: slideInLeft var(--anim-duration-normal) var(--anim-ease-out); }
+.anim-slideInRight { animation: slideInRight var(--anim-duration-normal) var(--anim-ease-out); }
+
+.transition-fast { transition-duration: var(--anim-duration-fast); transition-timing-function: var(--anim-ease-in-out); }
+.transition-normal { transition-duration: var(--anim-duration-normal); transition-timing-function: var(--anim-ease-in-out); }
+.transition-slow { transition-duration: var(--anim-duration-slow); transition-timing-function: var(--anim-ease-in-out); }
+
+/* ==========================================================================
+   10. MISC
+   Gradients, miscellaneous helpers, and print styles
+   ========================================================================== */
+
+/* Gradient backgrounds */
+.bg-gradient-conic {
+    background: conic-gradient(var(--win-gradient-start), var(--win-gradient-mid), var(--win-gradient-end));
+}
+.bg-gradient-radial {
+    background: radial-gradient(circle at center, var(--win-gradient-start), var(--win-gradient-end));
+}
+.bg-gradient-linear {
+    background: linear-gradient(90deg, var(--win-gradient-start), var(--win-gradient-end));
+}
+
+/* Divider */
+.divider {
+    height: 1px;
+    background: var(--win-surface-light-border);
+    margin: var(--spacing-md) 0;
+}
+
+/* Print adjustments */
+@media print {
+    body { background: #fff; color: #000; }
+    .no-print { display: none !important; }
+    .print-block { display: block !important; }
+}
+
+/* Screen reader only */
+.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+/* Rotate utilities */
+.rotate-0 { transform: rotate(0deg) !important; }
+.rotate-45 { transform: rotate(45deg) !important; }
+.rotate-90 { transform: rotate(90deg) !important; }
+.rotate-180 { transform: rotate(180deg) !important; }
+
+/* Scale utilities */
+.scale-90 { transform: scale(0.9) !important; }
+.scale-100 { transform: scale(1) !important; }
+.scale-110 { transform: scale(1.1) !important; }
+
+/* Translate utilities */
+.translate-x-1 { transform: translateX(0.25rem) !important; }
+.translate-x-2 { transform: translateX(0.5rem) !important; }
+.translate-y-1 { transform: translateY(0.25rem) !important; }
+.translate-y-2 { transform: translateY(0.5rem) !important; }
+
+/* Aspect ratio */
+.aspect-square { aspect-ratio: 1 / 1; }
+.aspect-video { aspect-ratio: 16 / 9; }
+
+/* Flip utilities */
+.flip-x { transform: scaleX(-1) !important; }
+.flip-y { transform: scaleY(-1) !important; }
+
+/* ==========================================================================
+   End Misc Section (~200 lines)
+   ========================================================================== */
+
+/* ==========================================================================
+   11. RESPONSIVE UTILITIES
+   Visibility helpers for different screen sizes
+   ========================================================================== */
+
+@media (max-width: 639px) {
+    .hide-sm { display: none !important; }
+}
+
+@media (min-width: 640px) and (max-width: 767px) {
+    .hide-md { display: none !important; }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+    .hide-lg { display: none !important; }
+}
+
+@media (min-width: 1024px) {
+    .hide-xl { display: none !important; }
+}
+
+@media (min-width: 640px) {
+    .show-sm { display: block !important; }
+}
+
+@media (min-width: 768px) {
+    .show-md { display: block !important; }
+}
+
+@media (min-width: 1024px) {
+    .show-lg { display: block !important; }
+}
+
+@media (min-width: 1280px) {
+    .show-xl { display: block !important; }
+}
+
+/* Responsive spacing */
+@media (min-width: 768px) {
+    .md\:p-6 { padding: calc(var(--spacing-unit) * 10) !important; }
+    .md\:m-6 { margin: calc(var(--spacing-unit) * 10) !important; }
+}
+
+@media (min-width: 1024px) {
+    .lg\:p-8 { padding: calc(var(--spacing-unit) * 12) !important; }
+    .lg\:m-8 { margin: calc(var(--spacing-unit) * 12) !important; }
+}
+
+/* Responsive text sizes */
+@media (min-width: 768px) {
+    .md\:text-lg { font-size: 1.125rem !important; }
+    .md\:text-xl { font-size: 1.25rem !important; }
+}
+
+@media (min-width: 1024px) {
+    .lg\:text-lg { font-size: 1.125rem !important; }
+    .lg\:text-xl { font-size: 1.25rem !important; }
+    .lg\:text-2xl { font-size: 1.5rem !important; }
+}
+
+/* ==========================================================================
+   End Responsive Utilities Section (~100 lines)
+   ========================================================================== */
+
+/* ==========================================================================
+   12. EXTRA COMPONENTS
+   Tooltips and progress bars for enhanced UI
+   ========================================================================== */
+
+/* Tooltip */
+.tooltip {
+    position: relative;
+    display: inline-block;
+    cursor: help;
+}
+
+.tooltip .tooltip-text {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    z-index: 100;
+    background: var(--win-text-primary);
+    color: var(--win-text-on-accent);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--win-rounded-sm);
+    font-size: 0.75rem;
+    transition: opacity var(--anim-duration-fast) var(--anim-ease-in-out);
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Progress bar */
+.progress {
+    width: 100%;
+    background: var(--win-surface-light-border);
+    border-radius: var(--win-rounded-md);
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 8px;
+    background: var(--win-primary-accent);
+    width: 0;
+    transition: width var(--anim-duration-normal) var(--anim-ease-in-out);
+}
+
+/* ==========================================================================
+   End Extra Components Section (~70 lines)
+   ========================================================================== */
