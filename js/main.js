@@ -1,5 +1,6 @@
 const APP_VERSION = '1.0.2';
 console.log(`main.js loaded - Vastia ${APP_VERSION}`);
+const THEME_KEY = 'themePreference';
 
 // --- Localization Globals ---
 let currentLanguage = 'ja'; // Default language
@@ -46,6 +47,7 @@ let currentAudioConfig = {
 };
 // UI elements for the configuration panel
 let toggleConfigButton, configPanel, configOptionsContainer, applyConfigButton;
+let themeToggleButton;
 
 // UI Elements that are widely used and initialized in DOMContentLoaded
 let fileUploadSection = null; // Added for drag and drop
@@ -135,6 +137,12 @@ async function setLanguage(lang) {
         // Clear status message or set to a default if needed
         if (statusMessageElement) {
             statusMessageElement.textContent = ''; // Clear it or set to a default translated prompt
+        }
+
+        if (themeToggleButton) {
+            const isDark = document.body.classList.contains('dark-mode');
+            themeToggleButton.setAttribute('aria-label', getTranslation(isDark ? 'lightMode' : 'darkMode'));
+            themeToggleButton.textContent = isDark ? '☀' : '🌙';
         }
 
     } else {
@@ -269,6 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
     configPanel = document.getElementById('configPanel');
     configOptionsContainer = document.getElementById('configOptionsContainer');
     applyConfigButton = document.getElementById('applyConfigButton');
+    themeToggleButton = document.getElementById('themeToggle');
 
     // Initialize event listeners for buttons that are now fetched internally by the functions
     const playBtn = document.getElementById('playButton');
@@ -553,6 +562,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (themeToggleButton) {
+        themeToggleButton.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            themeToggleButton.textContent = isDark ? '☀' : '🌙';
+            themeToggleButton.setAttribute('aria-label', getTranslation(isDark ? 'lightMode' : 'darkMode'));
+            localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+        });
+    }
+
     // Apply Config Button Listener
     // When clicked, re-applies the currently selected audio effect using the latest
     // configuration values from `currentAudioConfig`.
@@ -582,10 +601,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial language load
     const savedLanguage = localStorage.getItem('userLanguage');
+    const savedTheme = localStorage.getItem(THEME_KEY);
     const browserLanguage = navigator.language.split('-')[0]; // Get 'en' from 'en-US'
     const supportedLanguages = ['ja', 'en', 'ko', 'zh', 'hi', 'es', 'fr'];
+
     const initialLang = savedLanguage || (supportedLanguages.includes(browserLanguage) ? browserLanguage : 'ja');
     setLanguage(initialLang);
+
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+    }
+    if (themeToggleButton) {
+        const isDark = document.body.classList.contains('dark-mode');
+        themeToggleButton.textContent = isDark ? '☀' : '🌙';
+        themeToggleButton.setAttribute('aria-label', getTranslation(isDark ? 'lightMode' : 'darkMode'));
+    }
 });
 
 // --- Drag and Drop File Handling ---
