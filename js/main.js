@@ -1,9 +1,10 @@
-const APP_VERSION = '1.0';
+const APP_VERSION = '1.0.2';
 console.log(`main.js loaded - Vastia ${APP_VERSION}`);
 
 // --- Localization Globals ---
 let currentLanguage = 'ja'; // Default language
 let translations = {};
+let defaultTranslations = {};
 
 // Web Audio API Setup
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -57,10 +58,19 @@ let html5AudioPlayer = null;
 // --- Localization Functions ---
 async function loadTranslations(lang) {
     try {
+        if (Object.keys(defaultTranslations).length === 0) {
+            const defaultResp = await fetch('locales/en.json');
+            if (defaultResp.ok) {
+                defaultTranslations = await defaultResp.json();
+            } else {
+                console.error(`Could not load default en.json. Status: ${defaultResp.status}`);
+            }
+        }
+
         const response = await fetch(`locales/${lang}.json`);
         if (!response.ok) {
             console.error(`Could not load ${lang}.json. Status: ${response.status}`);
-            return null; // Or load default 'ja' as fallback
+            return null;
         }
         translations = await response.json();
         return translations;
@@ -138,7 +148,7 @@ async function setLanguage(lang) {
 }
 
 function getTranslation(key, ...args) {
-    let translation = translations[key] || key; // Fallback to key if not found
+    let translation = translations[key] || defaultTranslations[key] || key;
     if (args.length > 0 && typeof translation === 'string') {
         args.forEach((arg, index) => {
             // Support {0}, {1}, ... and also {fileName} specifically for fileSelected
