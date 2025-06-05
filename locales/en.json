@@ -119,6 +119,7 @@
   "maxPlanFeature2": "Unlimited access to Vastia Max Mode",
   "maxPlanFeature3": "Access to research preview features",
   "maxPlanFeature4": "Download full source code, derivative works allowed",
+  "selectPlanButton": "Select Plan",
   "htuStepConfigHeading": "(Optional) About Configuration Settings",
   "htuStepConfigDesc": "For more detailed customization, click the 'Show Configuration' button to open the settings panel. Here, you can adjust various parameters such as reverb type and panning depth. After making changes, press the 'Apply Configuration' button to reflect them."
 }
