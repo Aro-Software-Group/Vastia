@@ -178,6 +178,22 @@ nav.navbar {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
 }
 
+/* Pricing card enhancements */
+.pricing-card {
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: transform var(--anim-duration-normal) var(--anim-ease-out),
+                box-shadow var(--anim-duration-normal) var(--anim-ease-out);
+    animation: fadeInUp var(--anim-duration-normal) var(--anim-ease-out) forwards;
+}
+
+.pricing-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
 .c-button {
     border-radius: var(--win-rounded-md);
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
