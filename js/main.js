@@ -1,6 +1,8 @@
 const APP_VERSION = '1.0.2';
 console.log(`main.js loaded - Vastia ${APP_VERSION}`);
 const THEME_KEY = 'themePreference';
+const CONFIG_KEY = 'audioConfig';
+const TRANSFORMATION_KEY = 'selectedTransformation';
 
 // --- Localization Globals ---
 let currentLanguage = 'ja'; // Default language
@@ -44,10 +46,46 @@ let currentAudioConfig = {
     'slowdown': { factor: 0.8 },
     'reverb': { mix: 0.5 }
     ,'hq': { oversample: 0 }
+    ,'chorus': { rate: 1.5, depth: 0.003, delay: 0.02, mix: 0.5 }
+    ,'flanger': { delayTime: 0.005, depth: 0.002, rate: 0.25, feedback: 0.5, mix: 0.5 }
+    ,'phaser': { rate: 0.5, depth: 0.8, frequency: 700, mix: 0.5 }
+    ,'compressor': { threshold: -24, ratio: 4, attack: 0.003, release: 0.25 }
 };
 // UI elements for the configuration panel
 let toggleConfigButton, configPanel, configOptionsContainer, applyConfigButton;
 let themeToggleButton;
+
+// Local storage helpers for user settings
+function saveAudioConfig() {
+    try {
+        localStorage.setItem(CONFIG_KEY, JSON.stringify(currentAudioConfig));
+    } catch (e) {
+        console.warn('Failed to save audio config:', e);
+    }
+}
+
+function loadAudioConfig() {
+    const stored = localStorage.getItem(CONFIG_KEY);
+    if (stored) {
+        try {
+            const parsed = JSON.parse(stored);
+            currentAudioConfig = { ...currentAudioConfig, ...parsed };
+        } catch (e) {
+            console.error('Failed to parse stored audio config:', e);
+        }
+    }
+}
+
+function saveSelectedTransformation() {
+    localStorage.setItem(TRANSFORMATION_KEY, selectedTransformation);
+}
+
+function loadSelectedTransformation() {
+    const stored = localStorage.getItem(TRANSFORMATION_KEY);
+    if (stored) {
+        selectedTransformation = stored;
+    }
+}
 
 // UI Elements that are widely used and initialized in DOMContentLoaded
 let fileUploadSection = null; // Added for drag and drop
@@ -278,6 +316,11 @@ document.addEventListener('DOMContentLoaded', () => {
     configOptionsContainer = document.getElementById('configOptionsContainer');
     applyConfigButton = document.getElementById('applyConfigButton');
     themeToggleButton = document.getElementById('themeToggle');
+
+    // Load stored settings
+    loadAudioConfig();
+    loadSelectedTransformation();
+    populateConfigOptions(selectedTransformation);
 
     // Initialize event listeners for buttons that are now fetched internally by the functions
     const playBtn = document.getElementById('playButton');
@@ -531,11 +574,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const localTransformationRadios = document.querySelectorAll('input[name="transformation"]');
     if (localTransformationRadios.length > 0) {
         localTransformationRadios.forEach(radio => {
+            if (radio.value === selectedTransformation) {
+                radio.checked = true;
+            }
             if (radio.checked) {
                 selectedTransformation = radio.value;
             }
             radio.addEventListener('change', (event) => {
                 selectedTransformation = event.target.value;
+                saveSelectedTransformation();
                 console.log("Selected transformation:", selectedTransformation);
                 if (configPanel && !configPanel.classList.contains('hidden')) {
                     populateConfigOptions(selectedTransformation);
@@ -890,6 +937,35 @@ function populateConfigOptions(effectType) {
         optionsHtml += `
             <div class="space-y-1"><label for="hqOversample" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('hqOversample', 'Oversample (0=Auto):')}</label><input type="range" id="hqOversample" min="0" max="4" step="1" value="${config.oversample}" class="config-slider"><span id="hqOversampleValue" class="text-xs text-[var(--win-text-tertiary)]">${config.oversample === 0 ? getTranslation('autoLabel', 'Auto') : config.oversample}</span></div>
         `;
+    } else if (effectType === 'chorus') {
+        optionsHtml += `
+            <div class="space-y-1"><label for="chorusRate" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('chorusRate', 'LFO Rate:')}</label><input type="range" id="chorusRate" min="0.1" max="5" step="0.1" value="${config.rate}" class="config-slider"><span id="chorusRateValue" class="text-xs text-[var(--win-text-tertiary)]">${config.rate} Hz</span></div>
+            <div class="space-y-1"><label for="chorusDepth" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('chorusDepth', 'LFO Depth:')}</label><input type="range" id="chorusDepth" min="0" max="0.01" step="0.0005" value="${config.depth}" class="config-slider"><span id="chorusDepthValue" class="text-xs text-[var(--win-text-tertiary)]">${config.depth}</span></div>
+            <div class="space-y-1"><label for="chorusDelay" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('chorusDelay', 'Delay (s):')}</label><input type="range" id="chorusDelay" min="0" max="0.05" step="0.005" value="${config.delay}" class="config-slider"><span id="chorusDelayValue" class="text-xs text-[var(--win-text-tertiary)]">${config.delay}</span></div>
+            <div class="space-y-1"><label for="chorusMix" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('chorusMix', 'Mix:')}</label><input type="range" id="chorusMix" min="0" max="1" step="0.05" value="${config.mix}" class="config-slider"><span id="chorusMixValue" class="text-xs text-[var(--win-text-tertiary)]">${config.mix}</span></div>
+        `;
+    } else if (effectType === 'flanger') {
+        optionsHtml += `
+            <div class="space-y-1"><label for="flangerDelayTime" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('flangerDelayTime', 'Base Delay (s):')}</label><input type="range" id="flangerDelayTime" min="0" max="0.01" step="0.0005" value="${config.delayTime}" class="config-slider"><span id="flangerDelayTimeValue" class="text-xs text-[var(--win-text-tertiary)]">${config.delayTime}</span></div>
+            <div class="space-y-1"><label for="flangerDepth" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('flangerDepth', 'Depth (s):')}</label><input type="range" id="flangerDepth" min="0" max="0.005" step="0.0005" value="${config.depth}" class="config-slider"><span id="flangerDepthValue" class="text-xs text-[var(--win-text-tertiary)]">${config.depth}</span></div>
+            <div class="space-y-1"><label for="flangerRate" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('flangerRate', 'LFO Rate:')}</label><input type="range" id="flangerRate" min="0.1" max="2" step="0.1" value="${config.rate}" class="config-slider"><span id="flangerRateValue" class="text-xs text-[var(--win-text-tertiary)]">${config.rate} Hz</span></div>
+            <div class="space-y-1"><label for="flangerFeedback" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('flangerFeedback', 'Feedback:')}</label><input type="range" id="flangerFeedback" min="0" max="1" step="0.05" value="${config.feedback}" class="config-slider"><span id="flangerFeedbackValue" class="text-xs text-[var(--win-text-tertiary)]">${config.feedback}</span></div>
+            <div class="space-y-1"><label for="flangerMix" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('flangerMix', 'Mix:')}</label><input type="range" id="flangerMix" min="0" max="1" step="0.05" value="${config.mix}" class="config-slider"><span id="flangerMixValue" class="text-xs text-[var(--win-text-tertiary)]">${config.mix}</span></div>
+        `;
+    } else if (effectType === 'phaser') {
+        optionsHtml += `
+            <div class="space-y-1"><label for="phaserFrequency" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('phaserFrequency', 'Base Frequency:')}</label><input type="range" id="phaserFrequency" min="50" max="2000" step="10" value="${config.frequency}" class="config-slider"><span id="phaserFrequencyValue" class="text-xs text-[var(--win-text-tertiary)]">${config.frequency} Hz</span></div>
+            <div class="space-y-1"><label for="phaserRate" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('phaserRate', 'LFO Rate:')}</label><input type="range" id="phaserRate" min="0.1" max="5" step="0.1" value="${config.rate}" class="config-slider"><span id="phaserRateValue" class="text-xs text-[var(--win-text-tertiary)]">${config.rate} Hz</span></div>
+            <div class="space-y-1"><label for="phaserDepth" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('phaserDepth', 'Depth:')}</label><input type="range" id="phaserDepth" min="0" max="1" step="0.05" value="${config.depth}" class="config-slider"><span id="phaserDepthValue" class="text-xs text-[var(--win-text-tertiary)]">${config.depth}</span></div>
+            <div class="space-y-1"><label for="phaserMix" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('phaserMix', 'Mix:')}</label><input type="range" id="phaserMix" min="0" max="1" step="0.05" value="${config.mix}" class="config-slider"><span id="phaserMixValue" class="text-xs text-[var(--win-text-tertiary)]">${config.mix}</span></div>
+        `;
+    } else if (effectType === 'compressor') {
+        optionsHtml += `
+            <div class="space-y-1"><label for="compressorThreshold" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('compressorThreshold', 'Threshold (dB):')}</label><input type="range" id="compressorThreshold" min="-60" max="0" step="1" value="${config.threshold}" class="config-slider"><span id="compressorThresholdValue" class="text-xs text-[var(--win-text-tertiary)]">${config.threshold} dB</span></div>
+            <div class="space-y-1"><label for="compressorRatio" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('compressorRatio', 'Ratio:')}</label><input type="range" id="compressorRatio" min="1" max="20" step="0.5" value="${config.ratio}" class="config-slider"><span id="compressorRatioValue" class="text-xs text-[var(--win-text-tertiary)]">${config.ratio}</span></div>
+            <div class="space-y-1"><label for="compressorAttack" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('compressorAttack', 'Attack (s):')}</label><input type="range" id="compressorAttack" min="0" max="1" step="0.01" value="${config.attack}" class="config-slider"><span id="compressorAttackValue" class="text-xs text-[var(--win-text-tertiary)]">${config.attack}</span></div>
+            <div class="space-y-1"><label for="compressorRelease" class="block text-sm font-medium text-[var(--win-text-secondary)]">${getTranslation('compressorRelease', 'Release (s):')}</label><input type="range" id="compressorRelease" min="0" max="1" step="0.01" value="${config.release}" class="config-slider"><span id="compressorReleaseValue" class="text-xs text-[var(--win-text-tertiary)]">${config.release}</span></div>
+        `;
     }
     configOptionsContainer.innerHTML = optionsHtml;
     document.querySelectorAll('.config-slider').forEach(slider => {
@@ -911,6 +987,18 @@ function populateConfigOptions(effectType) {
         } else if (slider.id.startsWith('hq')) {
             effectKey = 'hq';
             rawConfigKey = slider.id.substring(2);
+        } else if (slider.id.startsWith('chorus')) {
+            effectKey = 'chorus';
+            rawConfigKey = slider.id.substring(6);
+        } else if (slider.id.startsWith('flanger')) {
+            effectKey = 'flanger';
+            rawConfigKey = slider.id.substring(7);
+        } else if (slider.id.startsWith('phaser')) {
+            effectKey = 'phaser';
+            rawConfigKey = slider.id.substring(6);
+        } else if (slider.id.startsWith('compressor')) {
+            effectKey = 'compressor';
+            rawConfigKey = slider.id.substring(10);
         } else {
             console.error('Could not determine effectKey for slider ID:', slider.id);
             return; // Skip this slider if effectKey is unknown
@@ -942,6 +1030,27 @@ function populateConfigOptions(effectType) {
             else if (slider.id.includes('ReverbMix')) formattedConfigKey = 'reverbMix';
         } else if (effectKey === 'hq') {
             if (slider.id.includes('Oversample')) formattedConfigKey = 'oversample';
+        } else if (effectKey === 'chorus') {
+            if (slider.id.includes('Rate')) formattedConfigKey = 'rate';
+            else if (slider.id.includes('Depth')) formattedConfigKey = 'depth';
+            else if (slider.id.includes('Delay')) formattedConfigKey = 'delay';
+            else if (slider.id.includes('Mix')) formattedConfigKey = 'mix';
+        } else if (effectKey === 'flanger') {
+            if (slider.id.includes('DelayTime')) formattedConfigKey = 'delayTime';
+            else if (slider.id.includes('Depth')) formattedConfigKey = 'depth';
+            else if (slider.id.includes('Rate')) formattedConfigKey = 'rate';
+            else if (slider.id.includes('Feedback')) formattedConfigKey = 'feedback';
+            else if (slider.id.includes('Mix')) formattedConfigKey = 'mix';
+        } else if (effectKey === 'phaser') {
+            if (slider.id.includes('Frequency')) formattedConfigKey = 'frequency';
+            else if (slider.id.includes('Rate')) formattedConfigKey = 'rate';
+            else if (slider.id.includes('Depth')) formattedConfigKey = 'depth';
+            else if (slider.id.includes('Mix')) formattedConfigKey = 'mix';
+        } else if (effectKey === 'compressor') {
+            if (slider.id.includes('Threshold')) formattedConfigKey = 'threshold';
+            else if (slider.id.includes('Ratio')) formattedConfigKey = 'ratio';
+            else if (slider.id.includes('Attack')) formattedConfigKey = 'attack';
+            else if (slider.id.includes('Release')) formattedConfigKey = 'release';
         }
 
         // Ensure formattedConfigKey was actually found/set by the conditions above.
@@ -965,6 +1074,7 @@ function populateConfigOptions(effectType) {
             if (currentAudioConfig[effectKey]) {
                 currentAudioConfig[effectKey][formattedConfigKey] = value;
                 console.log(`[populateConfigOptions] Updated currentAudioConfig['${effectKey}'].${formattedConfigKey} to: ${value}`);
+                saveAudioConfig();
             } else {
                 console.error(`[populateConfigOptions] effectKey '${effectKey}' not found in currentAudioConfig.`);
             }
@@ -1049,6 +1159,18 @@ function triggerAudioProcessing() {
     } else if (selectedTransformation === 'hq') {
         effectPromise = applyHQEffect(originalAudioBuffer, effectConfig);
         effectDisplayName = getTranslation('effectNameHQ', "Quality Boost");
+    } else if (selectedTransformation === 'chorus') {
+        effectPromise = applyChorusEffect(originalAudioBuffer, effectConfig);
+        effectDisplayName = getTranslation('effectNameChorus', "Chorus");
+    } else if (selectedTransformation === 'flanger') {
+        effectPromise = applyFlangerEffect(originalAudioBuffer, effectConfig);
+        effectDisplayName = getTranslation('effectNameFlanger', "Flanger");
+    } else if (selectedTransformation === 'phaser') {
+        effectPromise = applyPhaserEffect(originalAudioBuffer, effectConfig);
+        effectDisplayName = getTranslation('effectNamePhaser', "Phaser");
+    } else if (selectedTransformation === 'compressor') {
+        effectPromise = applyCompressorEffect(originalAudioBuffer, effectConfig);
+        effectDisplayName = getTranslation('effectNameCompressor', "Compressor");
     } else if (selectedTransformation === 'reverb') {
         effectPromise = applyReverbOnlyEffect(originalAudioBuffer, effectConfig);
         effectDisplayName = getTranslation('effectNameReverb', "Reverb Only");
@@ -1861,6 +1983,172 @@ function applyHQEffect(inputBuffer, userConfig = {}) {
             }).then(resolve).catch(err => reject(new Error('Quality Boost failed: ' + err.message)));
         } catch (e) {
             reject(new Error('Error in applyHQEffect: ' + e.message));
+        }
+    });
+}
+
+// Chorus Effect
+function applyChorusEffect(inputBuffer, userConfig = {}) {
+    const config = { ...currentAudioConfig['chorus'], ...userConfig };
+    return new Promise((resolve, reject) => {
+        try {
+            if (!window.OfflineAudioContext) {
+                reject(new Error('OfflineAudioContext is not supported by this browser.'));
+                return;
+            }
+            const offlineCtx = new OfflineAudioContext(inputBuffer.numberOfChannels, inputBuffer.length, inputBuffer.sampleRate);
+            const source = offlineCtx.createBufferSource();
+            source.buffer = inputBuffer;
+
+            const delayNode = offlineCtx.createDelay();
+            delayNode.delayTime.value = config.delay;
+            const lfo = offlineCtx.createOscillator();
+            lfo.frequency.value = config.rate;
+            const lfoGain = offlineCtx.createGain();
+            lfoGain.gain.value = config.depth;
+            lfo.connect(lfoGain);
+            lfoGain.connect(delayNode.delayTime);
+
+            const wet = offlineCtx.createGain();
+            const dry = offlineCtx.createGain();
+            wet.gain.value = config.mix;
+            dry.gain.value = 1 - config.mix;
+
+            source.connect(delayNode);
+            delayNode.connect(wet);
+            source.connect(dry);
+            wet.connect(offlineCtx.destination);
+            dry.connect(offlineCtx.destination);
+
+            lfo.start(0);
+            source.start(0);
+            renderWithProgress(offlineCtx).then(resolve).catch(err => reject(new Error('Chorus rendering failed: ' + err.message)));
+        } catch (e) {
+            reject(new Error('Error in applyChorusEffect: ' + e.message));
+        }
+    });
+}
+
+// Flanger Effect
+function applyFlangerEffect(inputBuffer, userConfig = {}) {
+    const config = { ...currentAudioConfig['flanger'], ...userConfig };
+    return new Promise((resolve, reject) => {
+        try {
+            if (!window.OfflineAudioContext) {
+                reject(new Error('OfflineAudioContext is not supported by this browser.'));
+                return;
+            }
+            const extra = inputBuffer.sampleRate * config.delayTime;
+            const offlineCtx = new OfflineAudioContext(inputBuffer.numberOfChannels, inputBuffer.length + extra, inputBuffer.sampleRate);
+            const source = offlineCtx.createBufferSource();
+            source.buffer = inputBuffer;
+
+            const delayNode = offlineCtx.createDelay();
+            delayNode.delayTime.value = config.delayTime;
+            const feedback = offlineCtx.createGain();
+            feedback.gain.value = config.feedback;
+            delayNode.connect(feedback);
+            feedback.connect(delayNode);
+
+            const lfo = offlineCtx.createOscillator();
+            lfo.frequency.value = config.rate;
+            const lfoGain = offlineCtx.createGain();
+            lfoGain.gain.value = config.depth;
+            lfo.connect(lfoGain);
+            lfoGain.connect(delayNode.delayTime);
+
+            const wet = offlineCtx.createGain();
+            const dry = offlineCtx.createGain();
+            wet.gain.value = config.mix;
+            dry.gain.value = 1 - config.mix;
+
+            source.connect(dry);
+            source.connect(delayNode);
+            delayNode.connect(wet);
+            wet.connect(offlineCtx.destination);
+            dry.connect(offlineCtx.destination);
+
+            lfo.start(0);
+            source.start(0);
+            renderWithProgress(offlineCtx).then(resolve).catch(err => reject(new Error('Flanger rendering failed: ' + err.message)));
+        } catch (e) {
+            reject(new Error('Error in applyFlangerEffect: ' + e.message));
+        }
+    });
+}
+
+// Phaser Effect
+function applyPhaserEffect(inputBuffer, userConfig = {}) {
+    const config = { ...currentAudioConfig['phaser'], ...userConfig };
+    return new Promise((resolve, reject) => {
+        try {
+            if (!window.OfflineAudioContext) {
+                reject(new Error('OfflineAudioContext is not supported by this browser.'));
+                return;
+            }
+            const offlineCtx = new OfflineAudioContext(inputBuffer.numberOfChannels, inputBuffer.length, inputBuffer.sampleRate);
+            const source = offlineCtx.createBufferSource();
+            source.buffer = inputBuffer;
+
+            const stages = [];
+            for (let i = 0; i < 4; i++) {
+                const ap = offlineCtx.createBiquadFilter();
+                ap.type = 'allpass';
+                ap.frequency.value = config.frequency * (i + 1);
+                stages.push(ap);
+                if (i > 0) stages[i - 1].connect(ap);
+            }
+
+            const lfo = offlineCtx.createOscillator();
+            lfo.frequency.value = config.rate;
+            const lfoGain = offlineCtx.createGain();
+            lfoGain.gain.value = config.depth * config.frequency;
+            lfo.connect(lfoGain);
+            stages.forEach(stage => lfoGain.connect(stage.frequency));
+
+            const wet = offlineCtx.createGain();
+            const dry = offlineCtx.createGain();
+            wet.gain.value = config.mix;
+            dry.gain.value = 1 - config.mix;
+
+            source.connect(dry);
+            source.connect(stages[0]);
+            stages[stages.length - 1].connect(wet);
+            wet.connect(offlineCtx.destination);
+            dry.connect(offlineCtx.destination);
+
+            lfo.start(0);
+            source.start(0);
+            renderWithProgress(offlineCtx).then(resolve).catch(err => reject(new Error('Phaser rendering failed: ' + err.message)));
+        } catch (e) {
+            reject(new Error('Error in applyPhaserEffect: ' + e.message));
+        }
+    });
+}
+
+// Dynamics Compressor Effect
+function applyCompressorEffect(inputBuffer, userConfig = {}) {
+    const config = { ...currentAudioConfig['compressor'], ...userConfig };
+    return new Promise((resolve, reject) => {
+        try {
+            if (!window.OfflineAudioContext) {
+                reject(new Error('OfflineAudioContext is not supported by this browser.'));
+                return;
+            }
+            const offlineCtx = new OfflineAudioContext(inputBuffer.numberOfChannels, inputBuffer.length, inputBuffer.sampleRate);
+            const source = offlineCtx.createBufferSource();
+            source.buffer = inputBuffer;
+            const compressor = offlineCtx.createDynamicsCompressor();
+            compressor.threshold.value = config.threshold;
+            compressor.ratio.value = config.ratio;
+            compressor.attack.value = config.attack;
+            compressor.release.value = config.release;
+            source.connect(compressor);
+            compressor.connect(offlineCtx.destination);
+            source.start(0);
+            renderWithProgress(offlineCtx).then(resolve).catch(err => reject(new Error('Compressor rendering failed: ' + err.message)));
+        } catch (e) {
+            reject(new Error('Error in applyCompressorEffect: ' + e.message));
         }
     });
 }
